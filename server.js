@@ -8,9 +8,12 @@ const app = express();
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
 
-// 1. WhatsApp API Credentials (तुझा ओरिजिनल टोकन इथेच राहू दे)
-const TWILIO_ACCOUNT_SID = "AC_TWILIO_ACCOUNT_SID";
+// 1. Twilio API Credentials (तुझा ओरिजिनल टोकन इथेच राहू दे)
+const TWILIO_ACCOUNT_SID = "AC_TWILIO_ACCOUNT_SID"; 
 const TWILIO_AUTH_TOKEN = "1234 YOUR_TWILIO_AUTH_TOKEN";
+// 📝 बदल: तुझ्या Twilio डॅशबोर्डवर असलेला फोन नंबर इथे टाक (उदा. +1234567890)
+const TWILIO_PHONE_NUMBER = "+1XXXXXXXXXX"; 
+
 const client = twilio(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN);
 
 const DB_FILE = path.join(__dirname, "subscribers.json");
@@ -72,10 +75,7 @@ app.post("/api/subscribe", (req, res) => {
 
 // 3. Automation Cron: दर मिनिटाला चेक करेल (भारतीय वेळेनुसार)
 cron.schedule("* * * * *", () => {
-  // भारताच्या वेळेनुसार चालू वेळ मिळवणे
   const nowInIndia = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
-  
-  // १० मिनिटे पुढची वेळ काढणे (लेक्चर रिमाइंडरसाठी)
   const futureOffset = new Date(nowInIndia.getTime() + 10 * 60000); 
 
   const targetHours = String(futureOffset.getHours()).padStart(2, "0");
@@ -93,30 +93,33 @@ cron.schedule("* * * * *", () => {
   if (upcomingLecture) {
     const subscribers = JSON.parse(fs.readFileSync(DB_FILE));
 
+    // 📝 बदल: SMS मध्ये व्हॉट्सॲप सारखे बोल्ड (*) फॉरमॅटिंग दिसत नाही, म्हणून साध्या टेक्स्टमध्ये मेसेज तयार केला आहे.
     const alertMessage =
-      `🔔 *GHRU Lecture Reminder* (Starts in 10 mins)\n\n` +
-      `📚 *Subject:* ${upcomingLecture.subject}\n` +
-      `👨‍🏫 *Teacher:* ${upcomingLecture.teacher}\n` +
-      `⏰ *Time:* ${upcomingLecture.start}\n` +
-      `📍 *Room:* Class Room No. 105`;
+      `GHRU Lecture Reminder (Starts in 10 mins)\n\n` +
+      `Subject: ${upcomingLecture.subject}\n` +
+      `Teacher: ${upcomingLecture.teacher}\n` +
+      `Time: ${upcomingLecture.start}\n` +
+      `Room: Class Room No. 105`;
 
     subscribers.forEach((phoneNum) => {
+      // 📝 बदल: हा भाग आता डायरेक्ट नॉर्मल SMS पाठवेल
       client.messages
         .create({
-          from: "whatsapp:+14155238886", // Twilio Sandbox Number
-          to: `whatsapp:${phoneNum}`,
+          from: TWILIO_PHONE_NUMBER, // तुझा Twilio SMS नंबर
+          to: phoneNum,             // विद्यार्थ्याचा नंबर (उदा. +91XXXXXXXXXX)
           body: alertMessage,
         })
-        .then(() => console.log(`Alert sent out to: ${phoneNum}`))
-        .catch((err) => console.error(`Twilio Error:`, err));
+        .then(() => console.log(`SMS Alert sent out to: ${phoneNum}`))
+        .catch((err) => console.error(`Twilio SMS Error for ${phoneNum}:`, err));
     });
   }
 }, {
   scheduled: true,
-  timezone: "Asia/Kolkata" // भारताचा टाईमझोन सेट केला आहे
+  timezone: "Asia/Kolkata"
 });
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () =>
   console.log(`Website engine online at port ${PORT}`)
 );
+              
