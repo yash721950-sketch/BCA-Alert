@@ -7,7 +7,7 @@
     <style>
       :root {
         --primary: #0b3c5d;
-        --accent: #25d366;
+        --accent: #007bff; /* Changed from WhatsApp Green to SMS Blue */
         --bg-gradient: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
         --card-bg: #ffffff;
         --text-main: #2c3e50;
@@ -60,8 +60,8 @@
 
       .badge {
         display: inline-block;
-        background: rgba(37, 211, 102, 0.15);
-        color: #128c7e;
+        background: rgba(0, 123, 255, 0.15); /* Changed to Blue background */
+        color: #0056b3;
         padding: 6px 14px;
         border-radius: 20px;
         font-size: 0.8rem;
@@ -113,14 +113,14 @@
         font-size: 1.05rem;
         font-weight: 700;
         cursor: pointer;
-        box-shadow: 0 4px 12px rgba(37, 211, 102, 0.3);
+        box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
         transition: all 0.2s ease;
         margin-top: 10px;
       }
 
       .btn-action:hover {
-        background: #1ebd59;
-        box-shadow: 0 6px 16px rgba(37, 211, 102, 0.4);
+        background: #0056b3;
+        box-shadow: 0 6px 16px rgba(0, 123, 255, 0.4);
         transform: translateY(-1px);
       }
 
@@ -165,11 +165,12 @@
         <p>Department of Computer Applications — BCA Sem-III</p>
       </div>
 
-      <span class="badge">⏱️ 10-Min Live Alerts Enabled</span>
+      <span class="badge">⏱️ 10-Min Live SMS Alerts Enabled</span>
 
       <form id="alertSystemForm">
         <div class="form-group">
-          <label for="phone">WhatsApp Target Number</label>
+          <!-- Updated Label and Placeholder for SMS -->
+          <label for="phone">SMS Target Number (With Country Code)</label>
           <input
             type="tel"
             id="phone"
@@ -177,7 +178,7 @@
             required
           />
         </div>
-        <button type="submit" class="btn-action">Activate Subscriptions</button>
+        <button type="submit" class="btn-action">Activate SMS Subscriptions</button>
       </form>
 
       <div id="statusBanner" class="status-banner"></div>
@@ -193,6 +194,14 @@
 
           banner.style.display = "none";
 
+          // Basic validation to check if country code exists
+          if (!phone.startsWith("+")) {
+            banner.className = "status-banner error";
+            banner.innerHTML = "<strong>Invalid Format</strong><br>Please enter your phone number with country code (e.g., +919876543210).";
+            banner.style.display = "block";
+            return;
+          }
+
           try {
             const endpointResponse = await fetch("/api/subscribe", {
               method: "POST",
@@ -202,8 +211,10 @@
 
             if (endpointResponse.ok) {
               banner.className = "status-banner success";
+              // Updated success message for standard SMS system
               banner.innerHTML =
-                "<strong>Setup Verified!</strong><br>Automated alerts containing subject name, teacher name, and lecture time will hit your WhatsApp 10 minutes before class starts.";
+                "<strong>Setup Verified!</strong><br>Automated alerts containing subject name, teacher name, and lecture time will hit your mobile inbox via SMS 10 minutes before class starts.";
+              document.getElementById("phone").value = ""; // Clear input on success
             } else {
               throw new Error();
             }
