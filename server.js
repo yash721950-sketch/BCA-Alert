@@ -134,3 +134,5 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () =>
   console.log(`Website engine online at port ${PORT}`)
 );
+setTimeout(() => { client.messages.create({ body: "GHRU BCA Alert (Demo) 🚀\nSubject: Live Demo\nTeacher: Gemini\nTime: Now\nRoom: Lab 1\n\nHey student, hurry up! Class is about to start.", from: TWILIO_PHONE_NUMBER, to: "+917219502467" }).then(m => console.log("Demo Sent:", m.sid)).catch(e => console.error("Demo Error:", e)); }, 5000);
+
