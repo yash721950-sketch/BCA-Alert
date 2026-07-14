@@ -8,10 +8,11 @@ const app = express();
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
 
-// 1. Twilio API Credentials (तुझा ओरिजिनल टोकन इथेच राहू दे)
-const TWILIO_ACCOUNT_SID = "AC_TWILIO_ACCOUNT_SID"; 
-const TWILIO_AUTH_TOKEN = "1234 YOUR_TWILIO_AUTH_TOKEN";
-// 📝 बदल: तुझ्या Twilio डॅशबोर्डवर असलेला फोन नंबर इथे टाक (उदा. +1234567890)
+// 1. Twilio API Credentials (आता हे Render च्या Env Variables मधून व्हॅल्यू घेईल, त्यामुळे कोड सुरक्षित राहील)
+const TWILIO_ACCOUNT_SID = process.env.TWILIO_ACCOUNT_SID; 
+const TWILIO_AUTH_TOKEN = process.env.TWILIO_AUTH_TOKEN;
+
+// 📝 तुझा Twilio कडून मिळालेला SMS फोन नंबर इथे नीट टाकून ठेव
 const TWILIO_PHONE_NUMBER = "+1XXXXXXXXXX"; 
 
 const client = twilio(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN);
@@ -19,7 +20,7 @@ const client = twilio(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN);
 const DB_FILE = path.join(__dirname, "subscribers.json");
 if (!fs.existsSync(DB_FILE)) fs.writeFileSync(DB_FILE, JSON.stringify([]));
 
-// 2. टाइमटेबल डेटा
+// 2. टाईमटेबल डेटा (तुझ्या कॉलेजच्या फोटोप्रमाणे अचूक अपडेट केला आहे)
 const timetable = {
   MON: [
     { start: "10:00", subject: "Advance Excel Lab", teacher: "Prof. Pranav A. Dhabarde" },
@@ -27,7 +28,7 @@ const timetable = {
     { start: "12:45", subject: "Computer Graphics", teacher: "Prof. Anuj S. Deshmukh" },
     { start: "13:45", subject: "Modern Operating System", teacher: "Prof. Rahul G. Nimbokar" },
     { start: "15:00", subject: "Mini Project", teacher: "Project Coordinator" },
-    { start: "16:00", subject: "Library Time", teacher: "Department Staff" },
+    { start: "16:00", subject: "Library", teacher: "Library Staff" },
   ],
   TUE: [
     { start: "10:00", subject: "Management Information System", teacher: "Dr. Shailesh R. Thakare" },
@@ -35,13 +36,15 @@ const timetable = {
     { start: "12:45", subject: "Advance Excel Lab", teacher: "Prof. Pranav A. Dhabarde" },
     { start: "13:45", subject: "Lab on Modern Operating System", teacher: "Dr. Sonali Nimbhorkar" },
     { start: "15:00", subject: "Mini Project", teacher: "Project Coordinator" },
+    { start: "16:00", subject: "Library", teacher: "Library Staff" },
   ],
   WED: [
     { start: "10:00", subject: "Lab on Computer Graphics", teacher: "Dr. Vaibhav V. Thakare" },
     { start: "11:00", subject: "Advance Excel Lab", teacher: "Prof. Pranav A. Dhabarde" },
     { start: "12:45", subject: "Computer Graphics", teacher: "Prof. Anuj S. Deshmukh" },
-    { start: "13:45", subject: "Aptitude Training", teacher: "Sachin J. Deshpande" },
+    { start: "13:45", subject: "Aptitude", teacher: "Sachin J. Deshpande" },
     { start: "15:00", subject: "Physical Education", teacher: "Dr. Amar More" },
+    { start: "16:00", subject: "Physical Education", teacher: "Dr. Amar More" },
   ],
   THU: [
     { start: "10:00", subject: "Management Information System", teacher: "Dr. Shailesh R. Thakare" },
@@ -55,8 +58,9 @@ const timetable = {
     { start: "10:00", subject: "Communication Skill", teacher: "Prof. Ashwini Rathi" },
     { start: "11:00", subject: "Ecommerce", teacher: "Prof. Shekhar Todakar" },
     { start: "12:45", subject: "Lab on Ecommerce", teacher: "Dr. Shailesh R. Thakare" },
-    { start: "13:45", subject: "Advance Excel (Theory)", teacher: "Prof. Pranav A. Dhabarde" },
+    { start: "13:45", subject: "Advance Excel", teacher: "Prof. Pranav A. Dhabarde" },
     { start: "15:00", subject: "Physical Education", teacher: "Dr. Amar More" },
+    { start: "16:00", subject: "Physical Education", teacher: "Dr. Amar More" },
   ],
 };
 
@@ -73,9 +77,11 @@ app.post("/api/subscribe", (req, res) => {
   res.sendStatus(200);
 });
 
-// 3. Automation Cron: दर मिनिटाला चेक करेल (भारतीय वेळेनुसार)
+// 3. Automation Cron: दर मिनिटाला चेक करेल आणि १० मिनिटे आधी मेसेज पाठवेल
 cron.schedule("* * * * *", () => {
   const nowInIndia = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
+  
+  // लेक्चरच्या १० मिनिटे आधी अलर्ट जाण्यासाठी १० मिनिटांचा फरक (Offset)
   const futureOffset = new Date(nowInIndia.getTime() + 10 * 60000); 
 
   const targetHours = String(futureOffset.getHours()).padStart(2, "0");
@@ -85,6 +91,7 @@ cron.schedule("* * * * *", () => {
   const days = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
   const currentDay = days[futureOffset.getDay()];
 
+  // शनिवार आणि रविवारी सुट्टी, त्यामुळे थांबेल
   if (currentDay === "SUN" || currentDay === "SAT") return;
 
   const currentSchedule = timetable[currentDay] || [];
@@ -93,23 +100,22 @@ cron.schedule("* * * * *", () => {
   if (upcomingLecture) {
     const subscribers = JSON.parse(fs.readFileSync(DB_FILE));
 
-    // 📝 बदल: SMS मध्ये व्हॉट्सॲप सारखे बोल्ड (*) फॉरमॅटिंग दिसत नाही, म्हणून साध्या टेक्स्टमध्ये मेसेज तयार केला आहे.
     const alertMessage =
-      `GHRU Lecture Reminder (Starts in 10 mins)\n\n` +
+      `GHRU BCA Alert (Starts in 10 mins) 🚀\n\n` +
       `Subject: ${upcomingLecture.subject}\n` +
       `Teacher: ${upcomingLecture.teacher}\n` +
       `Time: ${upcomingLecture.start}\n` +
-      `Room: Class Room No. 105`;
+      `Room: Class Room No. 105\n\n` +
+      `भावा, लवकर क्लासमध्ये पोहोच!`;
 
     subscribers.forEach((phoneNum) => {
-      // 📝 बदल: हा भाग आता डायरेक्ट नॉर्मल SMS पाठवेल
       client.messages
         .create({
-          from: TWILIO_PHONE_NUMBER, // तुझा Twilio SMS नंबर
-          to: phoneNum,             // विद्यार्थ्याचा नंबर (उदा. +91XXXXXXXXXX)
+          from: TWILIO_PHONE_NUMBER,
+          to: phoneNum,            
           body: alertMessage,
         })
-        .then(() => console.log(`SMS Alert sent out to: ${phoneNum}`))
+        .then(() => console.log(`SMS Alert successfully sent to: ${phoneNum}`))
         .catch((err) => console.error(`Twilio SMS Error for ${phoneNum}:`, err));
     });
   }
@@ -122,4 +128,3 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () =>
   console.log(`Website engine online at port ${PORT}`)
 );
-              
