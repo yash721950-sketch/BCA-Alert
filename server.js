@@ -8,7 +8,7 @@ const app = express();
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
 
-// 1. Twilio API Credentials (आता हे Render च्या Env Variables मधून व्हॅल्यू घेईल, त्यामुळे कोड सुरक्षित राहील)
+// 1. Twilio API Credentials (Render च्या Env Variables मधून व्हॅल्यू घेईल)
 const TWILIO_ACCOUNT_SID = process.env.TWILIO_ACCOUNT_SID; 
 const TWILIO_AUTH_TOKEN = process.env.TWILIO_AUTH_TOKEN;
 
@@ -20,7 +20,7 @@ const client = twilio(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN);
 const DB_FILE = path.join(__dirname, "subscribers.json");
 if (!fs.existsSync(DB_FILE)) fs.writeFileSync(DB_FILE, JSON.stringify([]));
 
-// 2. टाईमटेबल डेटा (तुझ्या कॉलेजच्या फोटोप्रमाणे अचूक अपडेट केला आहे)
+// 2. टाईमटेबल डेटा
 const timetable = {
   MON: [
     { start: "10:00", subject: "Advance Excel Lab", teacher: "Prof. Pranav A. Dhabarde" },
@@ -64,15 +64,23 @@ const timetable = {
   ],
 };
 
-// Route to handle registrations
+// 🛠️ नंबर फॉरमॅट फिक्स करणारा Route
 app.post("/api/subscribe", (req, res) => {
-  let phone = req.body.phone.replace(/[^0-9+]/g, "");
-  if (!phone.startsWith("+")) phone = "+" + phone;
+  let cleanPhone = req.body.phone.replace(/[^0-9]/g, "");
+
+  if (cleanPhone.length === 10) {
+    cleanPhone = "+91" + cleanPhone;
+  } else if (cleanPhone.length === 12 && cleanPhone.startsWith("91")) {
+    cleanPhone = "+" + cleanPhone;
+  } else if (!cleanPhone.startsWith("+")) {
+    cleanPhone = "+" + cleanPhone;
+  }
 
   const subscribers = JSON.parse(fs.readFileSync(DB_FILE));
-  if (!subscribers.includes(phone)) {
-    subscribers.push(phone);
+  if (!subscribers.includes(cleanPhone)) {
+    subscribers.push(cleanPhone);
     fs.writeFileSync(DB_FILE, JSON.stringify(subscribers));
+    console.log(`Successfully registered verified number: ${cleanPhone}`);
   }
   res.sendStatus(200);
 });
@@ -80,8 +88,6 @@ app.post("/api/subscribe", (req, res) => {
 // 3. Automation Cron: दर मिनिटाला चेक करेल आणि १० मिनिटे आधी मेसेज पाठवेल
 cron.schedule("* * * * *", () => {
   const nowInIndia = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
-  
-  // लेक्चरच्या १० मिनिटे आधी अलर्ट जाण्यासाठी १० मिनिटांचा फरक (Offset)
   const futureOffset = new Date(nowInIndia.getTime() + 10 * 60000); 
 
   const targetHours = String(futureOffset.getHours()).padStart(2, "0");
@@ -91,7 +97,6 @@ cron.schedule("* * * * *", () => {
   const days = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
   const currentDay = days[futureOffset.getDay()];
 
-  // शनिवार आणि रविवारी सुट्टी, त्यामुळे थांबेल
   if (currentDay === "SUN" || currentDay === "SAT") return;
 
   const currentSchedule = timetable[currentDay] || [];
@@ -100,13 +105,14 @@ cron.schedule("* * * * *", () => {
   if (upcomingLecture) {
     const subscribers = JSON.parse(fs.readFileSync(DB_FILE));
 
+    // 🛠️ बदल: शेवटी नवीन भारी इंग्लिश लाईन टाकली आहे
     const alertMessage =
       `GHRU BCA Alert (Starts in 10 mins) 🚀\n\n` +
       `Subject: ${upcomingLecture.subject}\n` +
       `Teacher: ${upcomingLecture.teacher}\n` +
       `Time: ${upcomingLecture.start}\n` +
       `Room: Class Room No. 105\n\n` +
-      `भावा, लवकर क्लासमध्ये पोहोच!`;
+      `are bhai, hurry up! Class is about to start.`;
 
     subscribers.forEach((phoneNum) => {
       client.messages
