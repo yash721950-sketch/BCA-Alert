@@ -13,7 +13,7 @@ const TWILIO_ACCOUNT_SID = process.env.TWILIO_ACCOUNT_SID;
 const TWILIO_AUTH_TOKEN = process.env.TWILIO_AUTH_TOKEN;
 
 // 📝 तुझा Twilio कडून मिळालेला SMS फोन नंबर इथे नीट टाकून ठेव
-const TWILIO_PHONE_NUMBER = "+1XXXXXXXXXX"; 
+const TWILIO_PHONE_NUMBER = "+15673391350"; 
 
 const client = twilio(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN);
 
