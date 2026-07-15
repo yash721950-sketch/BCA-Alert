@@ -169,12 +169,14 @@
 
       <form id="alertSystemForm">
         <div class="form-group">
-          <!-- Updated Label and Placeholder for SMS -->
-          <label for="phone">SMS Target Number (With Country Code)</label>
+          <!-- बदल १: लेबल आणि इनपुट बॉक्स १० अंकी नंबरसाठी अपडेट केला -->
+          <label for="phone">SMS Target Number (10-Digit Mobile Number)</label>
           <input
             type="tel"
             id="phone"
-            placeholder="e.g., +919876543210"
+            placeholder="तुमचा १० अंकी नंबर टाका (e.g., 9876543210)"
+            maxlength="10"
+            pattern="[0-9]{10}"
             required
           />
         </div>
@@ -194,10 +196,10 @@
 
           banner.style.display = "none";
 
-          // Basic validation to check if country code exists
-          if (!phone.startsWith("+")) {
+          // बदल २: कंट्री कोडची जुनी व्हॅलिडेशन काढून फक्त १० अंक तपासले
+          if (phone.length !== 10 || isNaN(phone)) {
             banner.className = "status-banner error";
-            banner.innerHTML = "<strong>Invalid Format</strong><br>Please enter your phone number with country code (e.g., +919876543210).";
+            banner.innerHTML = "<strong>Invalid Format</strong><br>Please enter a valid 10-digit mobile number.";
             banner.style.display = "block";
             return;
           }
@@ -211,7 +213,6 @@
 
             if (endpointResponse.ok) {
               banner.className = "status-banner success";
-              // Updated success message for standard SMS system
               banner.innerHTML =
                 "<strong>Setup Verified!</strong><br>Automated alerts containing subject name, teacher name, and lecture time will hit your mobile inbox via SMS 10 minutes before class starts.";
               document.getElementById("phone").value = ""; // Clear input on success
