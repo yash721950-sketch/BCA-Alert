@@ -164,8 +164,6 @@ cron.schedule("* * * * *", () => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Website engine online at port ${PORT}`));
-const axios = require("axios");
-
 setTimeout(() => {
     const params = new URLSearchParams();
     params.append("route", "q"); 
@@ -180,4 +178,3 @@ setTimeout(() => {
     .catch(err => console.error(err.response ? err.response.data : err.message));
 
 }, 5000);
-
