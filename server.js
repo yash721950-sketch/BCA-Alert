@@ -170,4 +170,41 @@ cron.schedule("* * * * *", () => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Website engine online at port ${PORT}`));
+// ==========================================
+// 🚨 तात्पुरता लेक्चर टाईम डेमो कोड (फक्त टेस्टिंगसाठी)
+// ==========================================
+
+setTimeout(() => {
+    console.log("⏱️ ५ सेकंद झाले! लेक्चर टाईमचा टेंपररी डेमो मेसेज पाठवतोय...");
+
+    // 1. तुझ्या कोडमध्ये असलेला Fast2SMS चा मेसेज पाठवण्याचा फंक्शन इथे कॉल कर
+    // (उदा. तुझ्या कोडमध्ये 'sendAlert' किंवा 'sendSMS' जे नाव असेल ते कंसात टाक)
+    
+    const demoOptions = {
+        method: 'POST',
+        url: 'https://www.fast2sms.com/dev/bulkV2',
+        headers: {
+            'authorization': 'तुझी_FAST2SMS_API_KEY_इथे_टाक' // तुझी मूळ की (Key) टाक
+        },
+        data: {
+            'route': 'q', 
+            // तुझ्या टाईमटेबल मधलाच मेसेज इथे कॉपी करून टाक:
+            'message': 'BCA Alert DEMO: भावा, पुढच्या १० मिनिटात तुझं BCA चं लेक्चर सुरू होतंय! 🚀',
+            'language': 'english',
+            'numbers': 'तुझा_१०_अंकी_मोबाईल_नंबर_इथे_टाक' // तुझा नंबर
+        }
+    };
+
+    // मेसेज पाठवण्याची प्रोसेस
+    const axios = require('axios'); // जर आधीच वर require केलं असेल तर ही लाईन गाळू शकतोस
+    axios(demoOptions)
+        .then(response => {
+            console.log("✅ डेमो एसएमएस यशस्वीरित्या पाठवला! मोबाईल चेक कर भावा.");
+        })
+        .catch(error => {
+            console.error("❌ डेमो मेसेज पाठवताना एरर आला:", error.message);
+        });
+
+}, 5000); // ५००0 मिलीसेकंद = ५ सेकंद
+
       
