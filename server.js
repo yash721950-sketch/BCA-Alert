@@ -1,19 +1,15 @@
 const express = require("express");
 const cron = require("node-cron");
-const twilio = require("twilio");
 const fs = require("fs");
 const path = require("path");
+const axios = require("axios"); // Twilio ऐवजी API कॉल करण्यासाठी axios वापरणार
 
 const app = express();
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
 
-// 1. Twilio API Credentials
-const TWILIO_ACCOUNT_SID = process.env.TWILIO_ACCOUNT_SID; 
-const TWILIO_AUTH_TOKEN = process.env.TWILIO_AUTH_TOKEN;
-const TWILIO_PHONE_NUMBER = "+15673391350"; 
-
-const client = twilio(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN);
+// 🔑 तुझी Fast2SMS API Key आपण इथे सुरक्षितपणे सेट केली आहे
+const FAST2SMS_API_KEY = process.env.FAST2SMS_API_KEY || "FMe4AIKjH7nfrJGNYXWxSvmcht93TgPE2LyoQDikbuz8pCU6BlmtCNKX9bEyv30F6H8Vf5cJ1gindWBI"; 
 
 const DB_FILE = path.join(__dirname, "subscribers.json");
 if (!fs.existsSync(DB_FILE)) fs.writeFileSync(DB_FILE, JSON.stringify([]));
@@ -65,23 +61,47 @@ const timetable = {
   ],
 };
 
-// 🛠️ नंबर फॉरमॅट फिक्स करणारा Route
+// 🛠️ Fast2SMS साठी फक्त १० अंकी शुद्ध नंबर डेटाबेसमध्ये सेव्ह करणारा Route
 app.post("/api/subscribe", (req, res) => {
   let cleanPhone = req.body.phone.replace(/[^0-9]/g, "");
-  if (cleanPhone.length === 10) cleanPhone = "+91" + cleanPhone;
-  else if (cleanPhone.length === 12 && cleanPhone.startsWith("91")) cleanPhone = "+" + cleanPhone;
-  else if (!cleanPhone.startsWith("+")) cleanPhone = "+" + cleanPhone;
-
-  const subscribers = JSON.parse(fs.readFileSync(DB_FILE));
-  if (!subscribers.includes(cleanPhone)) {
-    subscribers.push(cleanPhone);
-    fs.writeFileSync(DB_FILE, JSON.stringify(subscribers));
-    console.log(`Successfully registered: ${cleanPhone}`);
+  
+  // जर नंबरच्या सुरुवातीला ९१ लावला असेल तर तो काढून फक्त १० अंकी शुद्ध नंबर ठेवू
+  if (cleanPhone.length === 12 && cleanPhone.startsWith("91")) {
+    cleanPhone = cleanPhone.substring(2);
   }
-  res.sendStatus(200);
+
+  if (cleanPhone.length === 10) {
+    const subscribers = JSON.parse(fs.readFileSync(DB_FILE));
+    if (!subscribers.includes(cleanPhone)) {
+      subscribers.push(cleanPhone);
+      fs.writeFileSync(DB_FILE, JSON.stringify(subscribers));
+      console.log(`Successfully registered student number: ${cleanPhone}`);
+    }
+    res.sendStatus(200);
+  } else {
+    res.status(400).send("Invalid Phone Number. Please enter a 10 digit number.");
+  }
 });
 
-// 3. Automation Cron
+// 🧪 तात्पुरता डेमो मेसेज तपासण्यासाठी Route (ब्राउझरमध्ये उघडून टेस्ट कर)
+app.get("/api/test-sms", (req, res) => {
+  const testNumber = "7219502467"; // तुझा नंबर
+  const demoMessage = `Lecture Alert!\nSub: Fast2SMS Test\nProf: Gemini\nTime: Now\nRoom: 105`;
+
+  axios.post("https://www.fast2sms.com/dev/bulkV2", {
+    route: "v3",
+    sender_id: "TXTIND", // विना DLT चा फ्री डिफॉल्ट सेंडर आयडी
+    message: demoMessage,
+    language: "english",
+    numbers: testNumber
+  }, {
+    headers: { "authorization": FAST2SMS_API_KEY }
+  })
+  .then(() => res.send("Fast2SMS Demo Sent Successfully! Check your phone inbox."))
+  .catch((err) => res.status(500).send("Fast2SMS Error: " + err.message));
+});
+
+// 3. Automation Cron (लेक्चर सुरू होण्यापूर्वी ५ ते १० मिनिटांच्या रेंजमध्ये मेसेज पाठवणारी सिस्टीम)
 cron.schedule("* * * * *", () => {
   const nowInIndia = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
   const days = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
@@ -91,7 +111,6 @@ cron.schedule("* * * * *", () => {
 
   const currentSchedule = timetable[currentDay] || [];
   
-  // ५ ते १० मिनिटांची टाईम रेंज
   const upcomingLecture = currentSchedule.find((l) => {
     const [lHours, lMinutes] = l.start.split(":");
     const lectureTime = new Date(nowInIndia);
@@ -107,30 +126,38 @@ cron.schedule("* * * * *", () => {
     if (!sentAlertsLog[alertKey]) {
       const subscribers = JSON.parse(fs.readFileSync(DB_FILE));
       
-      // 🛠️ मेसेज फॉरमॅट: यात टाईम (Time) चा समावेश केला आहे
-      const alertMessage = 
-        `Lecture Alert 🚀\n` +
-        `Sub: ${upcomingLecture.subject}\n` +
-        `Prof: ${upcomingLecture.teacher}\n` +
-        `Time: ${upcomingLecture.start}\n` +  // <--- इथे टाईम दिसेल
-        `Room: 105`;
+      if (subscribers.length > 0) {
+        const alertMessage = 
+          `Lecture Alert 🚀\n` +
+          `Sub: ${upcomingLecture.subject}\n` +
+          `Prof: ${upcomingLecture.teacher}\n` +
+          `Time: ${upcomingLecture.start}\n` +
+          `Room: 105`;
 
-      subscribers.forEach((phoneNum) => {
-        client.messages
-          .create({
-            from: TWILIO_PHONE_NUMBER,
-            to: phoneNum,            
-            body: alertMessage,
-          })
-          .then(() => console.log(`SMS Alert successfully sent to: ${phoneNum}`))
-          .catch((err) => console.error(`Twilio SMS Error for ${phoneNum}:`, err));
-      });
+        // सर्व नंबर्सना कॉमाने (comma) जोडून एकाच रिक्वेस्टमध्ये पाठवणे (Fast2SMS चे वैशिष्ट्य)
+        const allNumbers = subscribers.join(",");
+
+        // Fast2SMS API Request (Quick SMS without DLT)
+        axios.post("https://www.fast2sms.com/dev/bulkV2", {
+          route: "v3",
+          sender_id: "TXTIND",
+          message: alertMessage,
+          language: "english",
+          numbers: allNumbers
+        }, {
+          headers: {
+            "authorization": FAST2SMS_API_KEY
+          }
+        })
+        .then(() => console.log(`Fast2SMS: Alerts successfully sent to all students!`))
+        .catch((err) => console.error(`Fast2SMS API Error:`, err.message));
+      }
 
       sentAlertsLog[alertKey] = true;
     }
   }
 
-  // मेमरी क्लीनअप
+  // मेमरी क्लीनअप (जुने झालेले अलर्ट्स लॉग इरेज करणे)
   for (const key in sentAlertsLog) {
     const [day, startTime] = key.split("-");
     if (day === currentDay) {
@@ -147,4 +174,3 @@ cron.schedule("* * * * *", () => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Website engine online at port ${PORT}`));
-          
