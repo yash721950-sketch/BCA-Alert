@@ -165,30 +165,3 @@ cron.schedule("* * * * *", () => {
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Website engine online at port ${PORT}`));
 
-const axios = require("axios");
-
-// 🔑 तुझी Fast2SMS API Key आणि नंबर
-const FAST2SMS_API_KEY = "FMe4AIKjH7nfrJGNYXWxSvmcht93TgPE2LyoQDikbuz8pCU6BlmtCNKX9bEyv30F6H8Vf5cJ1gindWBI"; 
-const MY_NUMBER = "7219502467";
-
-console.log("सर्व्हर सुरू झालाय... ५ सेकंद थांबा...");
-
-// ⏱️ ५ सेकंदाचा टाईमआऊट
-setTimeout(() => {
-    console.log("🚀 ५ सेकंद झाले! मेसेज पाठवतोय...");
-
-    // Fast2SMS चा डेटा फॉरमॅट
-    const params = new URLSearchParams();
-    params.append("route", "q"); 
-    params.append("message", "BCA Alert: ५ सेकंदाच्या टाईमआऊट नंतर आलेला डेमो मेसेज! 🚀");
-    params.append("language", "english");
-    params.append("numbers", MY_NUMBER);
-
-    // API कॉल
-    axios.post("https://www.fast2sms.com/dev/bulkV2", params, {
-        headers: { "authorization": FAST2SMS_API_KEY }
-    })
-    .then(res => console.log("✅ मेसेज सक्सेसफुली पाठवला!:", res.data))
-    .catch(err => console.error("❌ एरर आला:", err.response ? err.response.data : err.message));
-
-}, 5000); // ५००० मिलीसेकंद = ५ सेकंद
