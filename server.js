@@ -65,7 +65,6 @@ const timetable = {
 app.post("/api/subscribe", (req, res) => {
   let cleanPhone = req.body.phone.replace(/[^0-9]/g, "");
   
-  // जर नंबरच्या सुरुवातीला ९१ लावला असेल तर तो काढून फक्त १० अंकी शुद्ध नंबर ठेवू
   if (cleanPhone.length === 12 && cleanPhone.startsWith("91")) {
     cleanPhone = cleanPhone.substring(2);
   }
@@ -90,7 +89,7 @@ app.get("/api/test-sms", (req, res) => {
 
   axios.post("https://www.fast2sms.com/dev/bulkV2", {
     route: "v3",
-    sender_id: "TXTIND", // विना DLT चा फ्री डिफॉल्ट सेंडर आयडी
+    sender_id: "TXTIND", 
     message: demoMessage,
     language: "english",
     numbers: testNumber
@@ -101,7 +100,7 @@ app.get("/api/test-sms", (req, res) => {
   .catch((err) => res.status(500).send("Fast2SMS Error: " + err.message));
 });
 
-// 3. Automation Cron (लेक्चर सुरू होण्यापूर्वी ५ ते १० मिनिटांच्या रेंजमध्ये मेसेज पाठवणारी सिस्टीम)
+// 3. Automation Cron
 cron.schedule("* * * * *", () => {
   const nowInIndia = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
   const days = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
@@ -134,10 +133,8 @@ cron.schedule("* * * * *", () => {
           `Time: ${upcomingLecture.start}\n` +
           `Room: 105`;
 
-        // सर्व नंबर्सना कॉमाने (comma) जोडून एकाच रिक्वेस्टमध्ये पाठवणे (Fast2SMS चे वैशिष्ट्य)
         const allNumbers = subscribers.join(",");
 
-        // Fast2SMS API Request (Quick SMS without DLT)
         axios.post("https://www.fast2sms.com/dev/bulkV2", {
           route: "v3",
           sender_id: "TXTIND",
@@ -157,7 +154,6 @@ cron.schedule("* * * * *", () => {
     }
   }
 
-  // मेमरी क्लीनअप (जुने झालेले अलर्ट्स लॉग इरेज करणे)
   for (const key in sentAlertsLog) {
     const [day, startTime] = key.split("-");
     if (day === currentDay) {
@@ -174,3 +170,4 @@ cron.schedule("* * * * *", () => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Website engine online at port ${PORT}`));
+      
