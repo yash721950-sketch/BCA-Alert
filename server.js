@@ -164,17 +164,3 @@ cron.schedule("* * * * *", () => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Website engine online at port ${PORT}`));
-setTimeout(() => {
-    const params = new URLSearchParams();
-    params.append("route", "q"); 
-    params.append("message", "BCA Alert: ५ सेकंदाच्या टाईमआऊट नंतर आलेला डेमो मेसेज! 🚀");
-    params.append("language", "english");
-    params.append("numbers", "7219502467");
-
-    axios.post("https://www.fast2sms.com/dev/bulkV2", params, {
-        headers: { "authorization": "FMe4AIKjH7nfrJGNYXWxSvmcht93TgPE2LyoQDikbuz8pCU6BlmtCNKX9bEyv30F6H8Vf5cJ1gindWBI" }
-    })
-    .then(res => console.log(res.data))
-    .catch(err => console.error(err.response ? err.response.data : err.message));
-
-}, 5000);
