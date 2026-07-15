@@ -104,15 +104,14 @@ cron.schedule("* * * * *", () => {
 
   if (upcomingLecture) {
     const subscribers = JSON.parse(fs.readFileSync(DB_FILE));
-
-    // 🛠️ बदल: शेवटी नवीन भारी इंग्लिश लाईन टाकली आहे
-    const alertMessage =
-      `GHRU BCA Alert (Starts in 10 mins) 🚀\n\n` +
-      `Subject: ${upcomingLecture.subject}\n` +
-      `Teacher: ${upcomingLecture.teacher}\n` +
-      `Time: ${upcomingLecture.start}\n` +
-      `Room: Class Room No. 105\n\n` +
-      `are bhai, hurry up! Class is about to start.`;
+    
+    // 🛠️ बदल: BCA Alert ऐवजी Lecture Alert केलं आणि मेसेज शॉर्ट ठेवला
+const alertMessage = 
+  `Lecture start (In 10m) 🚀\n` +
+  `Sub: ${upcomingLecture.subject}\n` +
+  `Prof: ${upcomingLecture.teacher}\n` +
+  `Room: 105`;
+    
 
     subscribers.forEach((phoneNum) => {
       client.messages
