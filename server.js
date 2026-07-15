@@ -8,17 +8,18 @@ const app = express();
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
 
-// 1. Twilio API Credentials (Render च्या Env Variables मधून व्हॅल्यू घेईल)
+// 1. Twilio API Credentials
 const TWILIO_ACCOUNT_SID = process.env.TWILIO_ACCOUNT_SID; 
 const TWILIO_AUTH_TOKEN = process.env.TWILIO_AUTH_TOKEN;
-
-// 📝 तुझा Twilio कडून मिळालेला SMS फोन नंबर इथे नीट टाकून ठेव
 const TWILIO_PHONE_NUMBER = "+15673391350"; 
 
 const client = twilio(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN);
 
 const DB_FILE = path.join(__dirname, "subscribers.json");
 if (!fs.existsSync(DB_FILE)) fs.writeFileSync(DB_FILE, JSON.stringify([]));
+
+// मेसेज रिपीट होऊ नये म्हणून मेमरी लॉग
+let sentAlertsLog = {}; 
 
 // 2. टाईमटेबल डेटा
 const timetable = {
@@ -67,62 +68,77 @@ const timetable = {
 // 🛠️ नंबर फॉरमॅट फिक्स करणारा Route
 app.post("/api/subscribe", (req, res) => {
   let cleanPhone = req.body.phone.replace(/[^0-9]/g, "");
-
-  if (cleanPhone.length === 10) {
-    cleanPhone = "+91" + cleanPhone;
-  } else if (cleanPhone.length === 12 && cleanPhone.startsWith("91")) {
-    cleanPhone = "+" + cleanPhone;
-  } else if (!cleanPhone.startsWith("+")) {
-    cleanPhone = "+" + cleanPhone;
-  }
+  if (cleanPhone.length === 10) cleanPhone = "+91" + cleanPhone;
+  else if (cleanPhone.length === 12 && cleanPhone.startsWith("91")) cleanPhone = "+" + cleanPhone;
+  else if (!cleanPhone.startsWith("+")) cleanPhone = "+" + cleanPhone;
 
   const subscribers = JSON.parse(fs.readFileSync(DB_FILE));
   if (!subscribers.includes(cleanPhone)) {
     subscribers.push(cleanPhone);
     fs.writeFileSync(DB_FILE, JSON.stringify(subscribers));
-    console.log(`Successfully registered verified number: ${cleanPhone}`);
+    console.log(`Successfully registered: ${cleanPhone}`);
   }
   res.sendStatus(200);
 });
 
-// 3. Automation Cron: दर मिनिटाला चेक करेल आणि १० मिनिटे आधी मेसेज पाठवेल
+// 3. Automation Cron
 cron.schedule("* * * * *", () => {
   const nowInIndia = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
-  const futureOffset = new Date(nowInIndia.getTime() + 10 * 60000); 
-
-  const targetHours = String(futureOffset.getHours()).padStart(2, "0");
-  const targetMinutes = String(futureOffset.getMinutes()).padStart(2, "0");
-  const timeMatchString = `${targetHours}:${targetMinutes}`;
-
   const days = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
-  const currentDay = days[futureOffset.getDay()];
+  const currentDay = days[nowInIndia.getDay()];
 
   if (currentDay === "SUN" || currentDay === "SAT") return;
 
   const currentSchedule = timetable[currentDay] || [];
-  const upcomingLecture = currentSchedule.find((l) => l.start === timeMatchString);
+  
+  // ५ ते १० मिनिटांची टाईम रेंज
+  const upcomingLecture = currentSchedule.find((l) => {
+    const [lHours, lMinutes] = l.start.split(":");
+    const lectureTime = new Date(nowInIndia);
+    lectureTime.setHours(parseInt(lHours), parseInt(lMinutes), 0, 0);
+
+    const diffInMinutes = (lectureTime - nowInIndia) / (1000 * 60);
+    return diffInMinutes > 5 && diffInMinutes <= 10;
+  });
 
   if (upcomingLecture) {
-    const subscribers = JSON.parse(fs.readFileSync(DB_FILE));
-    
-    // 🛠️ बदल: BCA Alert ऐवजी Lecture Alert केलं आणि मेसेज शॉर्ट ठेवला
-const alertMessage = 
-  `Lecture start (In 10m) 🚀\n` +
-  `Sub: ${upcomingLecture.subject}\n` +
-  `Prof: ${upcomingLecture.teacher}\n` +
-  `Room: 105`;
-    
+    const alertKey = `${currentDay}-${upcomingLecture.start}`;
 
-    subscribers.forEach((phoneNum) => {
-      client.messages
-        .create({
-          from: TWILIO_PHONE_NUMBER,
-          to: phoneNum,            
-          body: alertMessage,
-        })
-        .then(() => console.log(`SMS Alert successfully sent to: ${phoneNum}`))
-        .catch((err) => console.error(`Twilio SMS Error for ${phoneNum}:`, err));
-    });
+    if (!sentAlertsLog[alertKey]) {
+      const subscribers = JSON.parse(fs.readFileSync(DB_FILE));
+      
+      // 🛠️ मेसेज फॉरमॅट: यात टाईम (Time) चा समावेश केला आहे
+      const alertMessage = 
+        `Lecture Alert 🚀\n` +
+        `Sub: ${upcomingLecture.subject}\n` +
+        `Prof: ${upcomingLecture.teacher}\n` +
+        `Time: ${upcomingLecture.start}\n` +  // <--- इथे टाईम दिसेल
+        `Room: 105`;
+
+      subscribers.forEach((phoneNum) => {
+        client.messages
+          .create({
+            from: TWILIO_PHONE_NUMBER,
+            to: phoneNum,            
+            body: alertMessage,
+          })
+          .then(() => console.log(`SMS Alert successfully sent to: ${phoneNum}`))
+          .catch((err) => console.error(`Twilio SMS Error for ${phoneNum}:`, err));
+      });
+
+      sentAlertsLog[alertKey] = true;
+    }
+  }
+
+  // मेमरी क्लीनअप
+  for (const key in sentAlertsLog) {
+    const [day, startTime] = key.split("-");
+    if (day === currentDay) {
+      const [lHours, lMinutes] = startTime.split(":");
+      const lectureTime = new Date(nowInIndia);
+      lectureTime.setHours(parseInt(lHours), parseInt(lMinutes), 0, 0);
+      if (nowInIndia > lectureTime) delete sentAlertsLog[key];
+    }
   }
 }, {
   scheduled: true,
@@ -130,8 +146,5 @@ const alertMessage =
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () =>
-  console.log(`Website engine online at port ${PORT}`)
-);
-
-
+app.listen(PORT, () => console.log(`Website engine online at port ${PORT}`));
+          
