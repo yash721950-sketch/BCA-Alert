@@ -2,22 +2,21 @@ const express = require("express");
 const cron = require("node-cron");
 const fs = require("fs");
 const path = require("path");
-const axios = require("axios"); // Twilio ऐवजी API कॉल करण्यासाठी axios वापरणार
+const axios = require("axios");
 
 const app = express();
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
 
-// 🔑 तुझी Fast2SMS API Key आपण इथे सुरक्षितपणे सेट केली आहे
+// 🔑 तुझी Fast2SMS API Key
 const FAST2SMS_API_KEY = process.env.FAST2SMS_API_KEY || "FMe4AIKjH7nfrJGNYXWxSvmcht93TgPE2LyoQDikbuz8pCU6BlmtCNKX9bEyv30F6H8Vf5cJ1gindWBI"; 
 
 const DB_FILE = path.join(__dirname, "subscribers.json");
 if (!fs.existsSync(DB_FILE)) fs.writeFileSync(DB_FILE, JSON.stringify([]));
 
-// मेसेज रिपीट होऊ नये म्हणून मेमरी लॉग
 let sentAlertsLog = {}; 
 
-// 2. टाईमटेबल डेटा
+// २. टाईमटेबल डेटा
 const timetable = {
   MON: [
     { start: "10:00", subject: "Advance Excel Lab", teacher: "Prof. Pranav A. Dhabarde" },
@@ -61,13 +60,10 @@ const timetable = {
   ],
 };
 
-// 🛠️ Fast2SMS साठी फक्त १० अंकी शुद्ध नंबर डेटाबेसमध्ये सेव्ह करणारा Route
+// 🛠️ नंबर डेटाबेसमध्ये सेव्ह करणारा Route
 app.post("/api/subscribe", (req, res) => {
   let cleanPhone = req.body.phone.replace(/[^0-9]/g, "");
-  
-  if (cleanPhone.length === 12 && cleanPhone.startsWith("91")) {
-    cleanPhone = cleanPhone.substring(2);
-  }
+  if (cleanPhone.length === 12 && cleanPhone.startsWith("91")) cleanPhone = cleanPhone.substring(2);
 
   if (cleanPhone.length === 10) {
     const subscribers = JSON.parse(fs.readFileSync(DB_FILE));
@@ -78,29 +74,30 @@ app.post("/api/subscribe", (req, res) => {
     }
     res.sendStatus(200);
   } else {
-    res.status(400).send("Invalid Phone Number. Please enter a 10 digit number.");
+    res.status(400).send("Invalid Phone Number.");
   }
 });
 
-// 🧪 तात्पुरता डेमो मेसेज तपासण्यासाठी Route (ब्राउझरमध्ये उघडून टेस्ट कर)
+// 🧪 डेमो मेसेज तपासण्यासाठी रस्ता (ब्राउझरमध्ये उघडून टेस्ट कर)
 app.get("/api/test-sms", (req, res) => {
-  const testNumber = "7219502467"; // तुझा नंबर
+  const testNumber = "7219502467"; 
   const demoMessage = `Lecture Alert!\nSub: Fast2SMS Test\nProf: Gemini\nTime: Now\nRoom: 105`;
 
-  axios.post("https://www.fast2sms.com/dev/bulkV2", {
-    route: "v3",
-    sender_id: "TXTIND", 
-    message: demoMessage,
-    language: "english",
-    numbers: testNumber
-  }, {
+  // Fast2SMS साठी डेटा फॉरमॅट सेट केला
+  const params = new URLSearchParams();
+  params.append("route", "q"); // सोपा क्विक रूट वापरला
+  params.append("message", demoMessage);
+  params.append("language", "english");
+  params.append("numbers", testNumber);
+
+  axios.post("https://www.fast2sms.com/dev/bulkV2", params, {
     headers: { "authorization": FAST2SMS_API_KEY }
   })
-  .then(() => res.send("Fast2SMS Demo Sent Successfully! Check your phone inbox."))
-  .catch((err) => res.status(500).send("Fast2SMS Error: " + err.message));
+  .then(() => res.send("Fast2SMS Demo Sent Successfully! Check your phone."))
+  .catch((err) => res.status(500).send("Fast2SMS Error: " + (err.response ? JSON.stringify(err.response.data) : err.message)));
 });
 
-// 3. Automation Cron
+// ३. Automation Cron
 cron.schedule("* * * * *", () => {
   const nowInIndia = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
   const days = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
@@ -135,21 +132,18 @@ cron.schedule("* * * * *", () => {
 
         const allNumbers = subscribers.join(",");
 
-        axios.post("https://www.fast2sms.com/dev/bulkV2", {
-          route: "v3",
-          sender_id: "TXTIND",
-          message: alertMessage,
-          language: "english",
-          numbers: allNumbers
-        }, {
-          headers: {
-            "authorization": FAST2SMS_API_KEY
-          }
+        const params = new URLSearchParams();
+        params.append("route", "q");
+        params.append("message", alertMessage);
+        params.append("language", "english");
+        params.append("numbers", allNumbers);
+
+        axios.post("https://www.fast2sms.com/dev/bulkV2", params, {
+          headers: { "authorization": FAST2SMS_API_KEY }
         })
-        .then(() => console.log(`Fast2SMS: Alerts successfully sent to all students!`))
+        .then(() => console.log(`Fast2SMS: Alerts successfully sent!`))
         .catch((err) => console.error(`Fast2SMS API Error:`, err.message));
       }
-
       sentAlertsLog[alertKey] = true;
     }
   }
@@ -170,37 +164,31 @@ cron.schedule("* * * * *", () => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Website engine online at port ${PORT}`));
-// ==========================================
-// 🚨 तात्पुरता लेक्चर टाईम डेमो कोड (फिक्स केलेला)
-// ==========================================
 
+const axios = require("axios");
+
+// 🔑 तुझी Fast2SMS API Key आणि नंबर
+const FAST2SMS_API_KEY = "FMe4AIKjH7nfrJGNYXWxSvmcht93TgPE2LyoQDikbuz8pCU6BlmtCNKX9bEyv30F6H8Vf5cJ1gindWBI"; 
+const MY_NUMBER = "7219502467";
+
+console.log("सर्व्हर सुरू झालाय... ५ सेकंद थांबा...");
+
+// ⏱️ ५ सेकंदाचा टाईमआऊट
 setTimeout(() => {
-    console.log("⏱️ ५ सेकंद झाले! लेक्चर टाईमचा टेंपररी डेमो मेसेज पाठवतोय...");
+    console.log("🚀 ५ सेकंद झाले! मेसेज पाठवतोय...");
 
-    // तुझ्या मूळ कोडमधील पहिली लेक्चर (Advance Excel Lab) आपण डेमोसाठी घेतली आहे
-    const alertMessage = 
-      `Lecture Alert 🚀\n` +
-      `Sub: Advance Excel Lab\n` +
-      `Prof: Prof. Pranav A. Dhabarde\n` +
-      `Time: 10:00\n` +
-      `Room: 105`;
+    // Fast2SMS चा डेटा फॉरमॅट
+    const params = new URLSearchParams();
+    params.append("route", "q"); 
+    params.append("message", "BCA Alert: ५ सेकंदाच्या टाईमआऊट नंतर आलेला डेमो मेसेज! 🚀");
+    params.append("language", "english");
+    params.append("numbers", MY_NUMBER);
 
-    axios.post("https://www.fast2sms.com/dev/bulkV2", {
-      route: "v3", // तुझ्या मुख्य कोडमध्ये 'v3' रूट आहे, म्हणून इथेही 'v3' वापरलाय
-      sender_id: "TXTIND",
-      message: alertMessage,
-      language: "english",
-      numbers: "7219502467" // तुझा नंबर आपण इथे डायरेक्ट सेट केलाय
-    }, {
-      headers: {
-        "authorization": FAST2SMS_API_KEY // तुझ्या कोडमधील मूळ API KEY ऑटोमॅटिक वापरली जाईल
-      }
+    // API कॉल
+    axios.post("https://www.fast2sms.com/dev/bulkV2", params, {
+        headers: { "authorization": FAST2SMS_API_KEY }
     })
-    .then(() => {
-        console.log("✅ डेमो एसएमएस यशस्वीरित्या पाठवला! मोबाईल चेक कर भावा.");
-    })
-    .catch((err) => {
-        console.error("❌ डेमो मेसेज पाठवताना एरर आला:", err.message);
-    });
+    .then(res => console.log("✅ मेसेज सक्सेसफुली पाठवला!:", res.data))
+    .catch(err => console.error("❌ एरर आला:", err.response ? err.response.data : err.message));
 
-}, 5000); // ५ सेकंदाचा टाईमआऊट
+}, 5000); // ५००० मिलीसेकंद = ५ सेकंद
