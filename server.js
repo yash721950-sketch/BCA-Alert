@@ -11,13 +11,13 @@ app.use(express.static(path.join(__dirname, "public")));
 // 🔑 तुझी Fast2SMS API Key
 const FAST2SMS_API_KEY = process.env.FAST2SMS_API_KEY || "FMe4AIKjH7nfrJGNYXWxSvmcht93TgPE2LyoQDikbuz8pCU6BlmtCNKX9bEyv30F6H8Vf5cJ1gindWBI"; 
 
-// 🛢️ MySQL डेटाबेस कनेक्शन
-// (टीप: जर तू हा सर्व्हर Render किंवा इतर कुठे लाईव्ह केलास, तर तिथले डेटाबेस डिटेल्स इथे टाक)
+// 🛢️ MySQL डेटाबेस कनेक्शन (Aiven चे लाईव्ह डिटेल्स डायरेक्ट ॲड केले आहेत)
 const db = mysql.createPool({
-  host: process.env.DB_HOST || "localhost",      
-  user: process.env.DB_USER || "root",           
-  password: process.env.DB_PASSWORD || "password",   
-  database: process.env.DB_NAME || "bca_alerts",
+  host: "mysql-3a8a9382-yash721950-fa6f.b.aivencloud.com",      
+  port: 27814,
+  user: "avnadmin",           
+  password: "AVNS_kpN5Gy9-j1TmgoZg7o7",   
+  database: "defaultdb",
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0,
@@ -25,7 +25,6 @@ const db = mysql.createPool({
     rejectUnauthorized: false
   }
 });
-
 
 // डेटाबेस चालू आहे की नाही हे तपासण्यासाठी
 db.getConnection((err, connection) => {
@@ -91,7 +90,7 @@ const timetable = {
     { start: "12:45", subject: "Lab on Ecommerce", teacher: "Dr. Shailesh R. Thakare" },
     { start: "13:45", subject: "Advance Excel", teacher: "Prof. Pranav A. Dhabarde" },
     { start: "15:00", subject: "Physical Education", teacher: "Dr. Amar More" },
-    { start: "16:00", subject: "Physical Education", teacher: "Dr. Amar More" },
+    { start: "16:00", text: "Physical Education", teacher: "Dr. Amar More" },
   ],
 };
 
@@ -101,7 +100,6 @@ app.post("/api/subscribe", (req, res) => {
   if (cleanPhone.length === 12 && cleanPhone.startsWith("91")) cleanPhone = cleanPhone.substring(2);
 
   if (cleanPhone.length === 10) {
-    // MySQL मध्ये नंबर सेव्ह करण्यासाठी INSERT Query (IGNORE मुळे डुप्लिकेट नंबर एरर देणार नाही)
     const sql = "INSERT IGNORE INTO users (phone) VALUES (?)";
     db.query(sql, [cleanPhone], (err, result) => {
       if (err) {
@@ -134,7 +132,7 @@ app.get("/api/test-sms", (req, res) => {
   .catch((err) => res.status(500).send("Fast2SMS Error: " + (err.response ? JSON.stringify(err.response.data) : err.message)));
 });
 
-// 🚀 ३. Automation Cron (आता डेटाबेसमधून नंबर उचलेल)
+// 🚀 ३. Automation Cron
 cron.schedule("* * * * *", () => {
   const nowInIndia = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
   const days = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
@@ -158,7 +156,6 @@ cron.schedule("* * * * *", () => {
 
     if (!sentAlertsLog[alertKey]) {
       
-      // 🛢️ MySQL मधून सर्व विद्यार्थ्यांचे नंबर्स काढणे
       db.query("SELECT phone FROM users", (err, results) => {
         if (err) {
           console.error("❌ क्रॉन जॉबमध्ये नंबर काढताना एरर:", err.message);
@@ -173,7 +170,6 @@ cron.schedule("* * * * *", () => {
             `Time: ${upcomingLecture.start}\n` +
             `Room: 105`;
 
-          // सर्व नंबर्सना कॉमाने (,) एकत्र जोडणे
           const allNumbers = results.map(row => row.phone).join(",");
 
           const params = new URLSearchParams();
@@ -212,3 +208,4 @@ cron.schedule("* * * * *", () => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Website engine online at port ${PORT}`));
+               
