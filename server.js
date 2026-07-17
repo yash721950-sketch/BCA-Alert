@@ -1,8 +1,8 @@
 const express = require("express");
 const cron = require("node-cron");
-const fs = require("fs");
 const path = require("path");
 const axios = require("axios");
+const mysql = require("mysql2"); // 🛢️ MySQL पॅकेज जोडले
 
 const app = express();
 app.use(express.json());
@@ -11,8 +11,39 @@ app.use(express.static(path.join(__dirname, "public")));
 // 🔑 तुझी Fast2SMS API Key
 const FAST2SMS_API_KEY = process.env.FAST2SMS_API_KEY || "FMe4AIKjH7nfrJGNYXWxSvmcht93TgPE2LyoQDikbuz8pCU6BlmtCNKX9bEyv30F6H8Vf5cJ1gindWBI"; 
 
-const DB_FILE = path.join(__dirname, "subscribers.json");
-if (!fs.existsSync(DB_FILE)) fs.writeFileSync(DB_FILE, JSON.stringify([]));
+// 🛢️ MySQL डेटाबेस कनेक्शन
+// (टीप: जर तू हा सर्व्हर Render किंवा इतर कुठे लाईव्ह केलास, तर तिथले डेटाबेस डिटेल्स इथे टाक)
+const db = mysql.createPool({
+  host: process.env.DB_HOST || "localhost",      
+  user: process.env.DB_USER || "root",           
+  password: process.env.DB_PASSWORD || "password",   
+  database: process.env.DB_NAME || "bca_alerts",
+  waitForConnections: true,
+  connectionLimit: 10,
+  queueLimit: 0
+});
+
+// डेटाबेस चालू आहे की नाही हे तपासण्यासाठी
+db.getConnection((err, connection) => {
+  if (err) {
+    console.error("❌ MySQL डेटाबेस कनेक्शन फेल:", err.message);
+  } else {
+    console.log("✅ MySQL डेटाबेस यशस्वीरित्या कनेक्ट झाला! 🛢️");
+    
+    // युझर्ससाठी टेबल नसेल तर ऑटोमॅटिक तयार होईल
+    const createTableQuery = `
+      CREATE TABLE IF NOT EXISTS users (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        phone VARCHAR(15) UNIQUE NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `;
+    connection.query(createTableQuery, (tableErr) => {
+      connection.release();
+      if (tableErr) console.error("❌ टेबल तयार करताना एरर आला:", tableErr.message);
+    });
+  }
+});
 
 let sentAlertsLog = {}; 
 
@@ -60,32 +91,34 @@ const timetable = {
   ],
 };
 
-// 🛠️ नंबर डेटाबेसमध्ये सेव्ह करणारा Route
+// 🛠️ नंबर MySQL डेटाबेसमध्ये सेव्ह करणारा Route (Registration)
 app.post("/api/subscribe", (req, res) => {
   let cleanPhone = req.body.phone.replace(/[^0-9]/g, "");
   if (cleanPhone.length === 12 && cleanPhone.startsWith("91")) cleanPhone = cleanPhone.substring(2);
 
   if (cleanPhone.length === 10) {
-    const subscribers = JSON.parse(fs.readFileSync(DB_FILE));
-    if (!subscribers.includes(cleanPhone)) {
-      subscribers.push(cleanPhone);
-      fs.writeFileSync(DB_FILE, JSON.stringify(subscribers));
-      console.log(`Successfully registered student number: ${cleanPhone}`);
-    }
-    res.sendStatus(200);
+    // MySQL मध्ये नंबर सेव्ह करण्यासाठी INSERT Query (IGNORE मुळे डुप्लिकेट नंबर एरर देणार नाही)
+    const sql = "INSERT IGNORE INTO users (phone) VALUES (?)";
+    db.query(sql, [cleanPhone], (err, result) => {
+      if (err) {
+        console.error("❌ डेटाबेसमध्ये नंबर सेव्ह करताना एरर:", err.message);
+        return res.status(500).send("Database Error.");
+      }
+      console.log(`🚀 Successfully registered student number in MySQL: ${cleanPhone}`);
+      res.sendStatus(200);
+    });
   } else {
     res.status(400).send("Invalid Phone Number.");
   }
 });
 
-// 🧪 डेमो मेसेज तपासण्यासाठी रस्ता (ब्राउझरमध्ये उघडून टेस्ट कर)
+// 🧪 डेमो मेसेज तपासण्यासाठी रस्ता
 app.get("/api/test-sms", (req, res) => {
   const testNumber = "7219502467"; 
   const demoMessage = `Lecture Alert!\nSub: Fast2SMS Test\nProf: Gemini\nTime: Now\nRoom: 105`;
 
-  // Fast2SMS साठी डेटा फॉरमॅट सेट केला
   const params = new URLSearchParams();
-  params.append("route", "q"); // सोपा क्विक रूट वापरला
+  params.append("route", "q"); 
   params.append("message", demoMessage);
   params.append("language", "english");
   params.append("numbers", testNumber);
@@ -97,7 +130,7 @@ app.get("/api/test-sms", (req, res) => {
   .catch((err) => res.status(500).send("Fast2SMS Error: " + (err.response ? JSON.stringify(err.response.data) : err.message)));
 });
 
-// ३. Automation Cron
+// 🚀 ३. Automation Cron (आता डेटाबेसमधून नंबर उचलेल)
 cron.schedule("* * * * *", () => {
   const nowInIndia = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
   const days = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
@@ -120,30 +153,41 @@ cron.schedule("* * * * *", () => {
     const alertKey = `${currentDay}-${upcomingLecture.start}`;
 
     if (!sentAlertsLog[alertKey]) {
-      const subscribers = JSON.parse(fs.readFileSync(DB_FILE));
       
-      if (subscribers.length > 0) {
-        const alertMessage = 
-          `Lecture Alert 🚀\n` +
-          `Sub: ${upcomingLecture.subject}\n` +
-          `Prof: ${upcomingLecture.teacher}\n` +
-          `Time: ${upcomingLecture.start}\n` +
-          `Room: 105`;
+      // 🛢️ MySQL मधून सर्व विद्यार्थ्यांचे नंबर्स काढणे
+      db.query("SELECT phone FROM users", (err, results) => {
+        if (err) {
+          console.error("❌ क्रॉन जॉबमध्ये नंबर काढताना एरर:", err.message);
+          return;
+        }
 
-        const allNumbers = subscribers.join(",");
+        if (results.length > 0) {
+          const alertMessage = 
+            `Lecture Alert 🚀\n` +
+            `Sub: ${upcomingLecture.subject}\n` +
+            `Prof: ${upcomingLecture.teacher}\n` +
+            `Time: ${upcomingLecture.start}\n` +
+            `Room: 105`;
 
-        const params = new URLSearchParams();
-        params.append("route", "q");
-        params.append("message", alertMessage);
-        params.append("language", "english");
-        params.append("numbers", allNumbers);
+          // सर्व नंबर्सना कॉमाने (,) एकत्र जोडणे
+          const allNumbers = results.map(row => row.phone).join(",");
 
-        axios.post("https://www.fast2sms.com/dev/bulkV2", params, {
-          headers: { "authorization": FAST2SMS_API_KEY }
-        })
-        .then(() => console.log(`Fast2SMS: Alerts successfully sent!`))
-        .catch((err) => console.error(`Fast2SMS API Error:`, err.message));
-      }
+          const params = new URLSearchParams();
+          params.append("route", "q");
+          params.append("message", alertMessage);
+          params.append("language", "english");
+          params.append("numbers", allNumbers);
+
+          axios.post("https://www.fast2sms.com/dev/bulkV2", params, {
+            headers: { "authorization": FAST2SMS_API_KEY }
+          })
+          .then(() => console.log(`📢 Fast2SMS: Alerts successfully sent to all registered students!`))
+          .catch((err) => console.error(`❌ Fast2SMS API Error:`, err.message));
+        } else {
+          console.log("ℹ️ डेटाबेसमध्ये अजून एकही नंबर रजिस्टर्ड नाही.");
+        }
+      });
+
       sentAlertsLog[alertKey] = true;
     }
   }
