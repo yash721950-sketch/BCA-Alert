@@ -20,8 +20,12 @@ const db = mysql.createPool({
   database: process.env.DB_NAME || "bca_alerts",
   waitForConnections: true,
   connectionLimit: 10,
-  queueLimit: 0
+  queueLimit: 0,
+  ssl: {
+    rejectUnauthorized: false
+  }
 });
+
 
 // डेटाबेस चालू आहे की नाही हे तपासण्यासाठी
 db.getConnection((err, connection) => {
