@@ -9,7 +9,7 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
 
 // 🔑 तुझी Fast2SMS API Key
-const FAST2SMS_API_KEY = process.env.FAST2SMS_API_KEY || "FMe4AIKjH7nfrJGNYXWxSvmcht93TgPE2LyoQDikbuz8pCU6BlmtCNKX9bEyv30F6H8Vf5cJ1gindWBI"; 
+const FAST2SMS_API_KEY = process.env.FAST2SMS_API_KEY || "3AlbuU40tVZodDdi0avMxTI3U05B8UfaMd6g1tOrbSFon0peTuKTN8v13G3I"; 
 
 // 🛢️ MySQL डेटाबेस कनेक्शन (Aiven चे लाईव्ह डिटेल्स डायरेक्ट ॲड केले आहेत)
 const db = mysql.createPool({
