@@ -2,13 +2,13 @@ const express = require("express");
 const cron = require("node-cron");
 const path = require("path");
 const mysql = require("mysql2"); 
-const { Client, LocalAuth } = require("whatsapp-web.js"); // इथे LocalAuth केला
+const { Client, LocalAuth } = require("whatsapp-web.js");
 
 const app = express();
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
 
-// 🛢️ MySQL डेटाबेस कनेक्शन
+// 🛢️ MySQL डेटाबेस कनेक्शन (Aiven DB)
 const dbConfig = {
   host: "mysql-3a8a9382-yash721950-fa6f.b.aivencloud.com",      
   port: 27814,
@@ -57,10 +57,10 @@ function setupTables() {
 let isBotReady = false;
 let currentQrUrl = null;
 
-// 🟢 WhatsApp Client Setup (LocalAuth सह रेंडर फ्रेंडली)
+// 🟢 WhatsApp Client Setup (LocalAuth सह Railway फ्रेंडली - विदाऊट executablePath)
 const client = new Client({
   authStrategy: new LocalAuth({
-    dataPath: path.join(__dirname, ".wwebjs_auth") // रेंडरवर लोकल फोल्डरमध्ये सेशन सेव्ह होणार
+    dataPath: path.join(__dirname, ".wwebjs_auth")
   }),
   webVersionCache: {
     type: 'remote',
@@ -68,7 +68,6 @@ const client = new Client({
   },
   puppeteer: { 
     headless: true,
-    executablePath: '/usr/bin/google-chrome-stable', 
     args: [
       '--no-sandbox', 
       '--disable-setuid-sandbox', 
@@ -78,19 +77,19 @@ const client = new Client({
   }
 });
 
-// QR कोड इव्हेंट
+// QR कोड जनरेट झाल्यावर तो सेट करणे
 client.on("qr", (qr) => {
   console.log("📸 नवीन QR कोड जनरेट झाला आहे!");
   currentQrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(qr)}`;
 });
 
-// 🌐 QR कोड पाहण्यासाठी स्पेशल लिंक
+// 🌐 QR कोड मोबाईलवर पाहण्यासाठी स्पेशल लिंक
 app.get("/qr", (req, res) => {
   if (isBotReady) {
     res.send(`
       <div style="text-align: center; margin-top: 50px; font-family: Arial, sans-serif;">
         <h2 style="color: green;">✅ WhatsApp Bot यशस्वीरित्या कनेक्टेड आहे!</h2>
-        <p>आता स्कॅन करायची गरज नाही, बॉट चालू आहे भावा! 😎</p>
+        <p>आता स्कॅन करायची गरज नाही, बॉट बॅकग्राउंडला सुसाट चालू आहे भावा! 😎</p>
       </div>
     `);
   } else if (currentQrUrl) {
@@ -98,17 +97,17 @@ app.get("/qr", (req, res) => {
       <div style="text-align: center; margin-top: 50px; font-family: Arial, sans-serif;">
         <h2>📸 BCA Alert Bot - WhatsApp Login</h2>
         <p>तुझ्या मोबाईलच्या WhatsApp > Linked Devices मध्ये जाऊन हा QR कोड स्कॅन कर भावा:</p>
-        <div style="margin: 20px auto; padding: 20px; border: 2px dashed #075E54; display: inline-block; background: #f9f9f9; border-radius: 10px;">
+        <div style="margin: 20px auto; padding: 20px; border: 2px dashed #007bff; display: inline-block; background: #f9f9f9; border-radius: 10px;">
           <img src="${currentQrUrl}" alt="WhatsApp QR Code" style="width: 300px; height: 300px;" />
         </div>
-        <p style="color: #666;">💡 टीप: ही लिंक दुसऱ्या फोनवर/लॅपटॉपवर उघडून स्वतःच्या फोनने QR स्कॅन कर.</p>
+        <p style="color: red; font-weight: bold;">💡 टीप: ही लिंक दुसऱ्या फोनवर/लॅपटॉपवर उघडून स्वतःच्या फोनने स्कॅन कर!</p>
       </div>
     `);
   } else {
     res.send(`
       <div style="text-align: center; margin-top: 50px; font-family: Arial, sans-serif;">
         <h2>⏳ कृपया ३० सेकंद थांबा...</h2>
-        <p>सर्व्हर सुरू होत आहे आणि QR कोड जनरेट करत आहे... पेज थोड्या वेळाने रिफ्रेश कर भावा.</p>
+        <p>रेल्वे सर्व्हर QR कोड जनरेट करत आहे... पेज थोड्या वेळाने रिफ्रेश कर भावा.</p>
       </div>
     `);
   }
