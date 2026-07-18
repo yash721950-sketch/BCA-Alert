@@ -2,15 +2,71 @@ const express = require("express");
 const cron = require("node-cron");
 const path = require("path");
 const mysql = require("mysql2"); 
-const { Client, LocalAuth } = require("whatsapp-web.js");
+const { Client, RemoteAuth } = require("whatsapp-web.js"); // 👈 LocalAuth ऐवजी RemoteAuth वापरली
 
 const app = express();
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
 
-// 🟢 WhatsApp Client Setup
+// 🛢️ MySQL डेटाबेस कनेक्शन (सुरुवातीला घेतलं कारण लॉगिन डेटा इथेच सेव्ह करायचाय)
+const db = mysql.createPool({
+  host: "mysql-3a8a9382-yash721950-fa6f.b.aivencloud.com",      
+  port: 27814,
+  user: "avnadmin",           
+  password: process.env.DB_PASSWORD, 
+  database: "defaultdb",
+  waitForConnections: true,
+  connectionLimit: 10,
+  queueLimit: 0,
+  ssl: {
+    rejectUnauthorized: false
+  }
+});
+
+// 🛠️ कस्टम डेटाबेस सेशन स्टोअर (Render री-स्टार्ट झाला तरी लॉगिन टिकवण्यासाठी)
+const MySQLStore = {
+  sessionExists: async (options) => {
+    return new Promise((resolve) => {
+      db.query("SELECT 1 FROM wa_sessions WHERE session_id = ?", [options.session], (err, rows) => {
+        resolve(!err && rows.length > 0);
+      });
+    });
+  },
+  save: async (options) => {
+    return new Promise((resolve) => {
+      const dataStr = JSON.stringify(options.data);
+      db.query(
+        "INSERT INTO wa_sessions (session_id, data) VALUES (?, ?) ON DUPLICATE KEY UPDATE data = ?",
+        [options.session, dataStr, dataStr],
+        () => resolve()
+      );
+    });
+  },
+  extract: async (options) => {
+    return new Promise((resolve) => {
+      db.query("SELECT data FROM wa_sessions WHERE session_id = ?", [options.session], (err, rows) => {
+        if (!err && rows.length > 0) {
+          resolve(JSON.parse(rows[0].data));
+        } else {
+          resolve(null);
+        }
+      });
+    });
+  },
+  delete: async (options) => {
+    return new Promise((resolve) => {
+      db.query("DELETE FROM wa_sessions WHERE session_id = ?", [options.session], () => resolve());
+    });
+  }
+};
+
+// 🟢 WhatsApp Client Setup (RemoteAuth सह)
 const client = new Client({
-  authStrategy: new LocalAuth(),
+  authStrategy: new RemoteAuth({
+    clientId: "bca_bot_session",
+    store: MySQLStore,
+    backupSyncIntervalMs: 60000 // दर १ मिनिटाला बॅकअप सिंक होईल
+  }),
   webVersionCache: {
     type: 'remote',
     remotePath: 'https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/2.2412.54.html',
@@ -27,32 +83,36 @@ const client = new Client({
   }
 });
 
-// 📲 फिक्स केलेला सुरक्षित Pairing Code जनरेशन
+// 📲 सुरक्षित Pairing Code जनरेशन
 let pairingCodeRequested = false;
 client.on("qr", async (qr) => {
   if (pairingCodeRequested) return;
   pairingCodeRequested = true;
 
   console.log("---------------------------------------------------------");
-  console.log("⏳ QR कोड ऐवजी Pairing Code जनरेट होत आहे, ५ सेकंद थांबा...");
+  console.log("⏳ सुरक्षित Pairing Code जनरेट होत आहे, ५ सेकंद थांबा...");
   console.log("---------------------------------------------------------");
   
-  // व्हॉट्सॲप सर्व्हरला ब्लॉक करण्यापासून रोखण्यासाठी ५ सेकंदाचा डिले
   await new Promise(resolve => setTimeout(resolve, 5000));
 
   try {
     const myPhoneNumber = "917219502467"; 
     const pairingCode = await client.requestPairingCode(myPhoneNumber);
-    console.log("\n🔥 तुझा WHATSAPP PAIRING CODE आहे: ", pairingCode);
-    console.log("\n👉 मोबाईलच्या WhatsApp > Linked Devices > Link with phone number मध्ये जाऊन हा कोड टाक भावा!\n");
+    console.log("\n🔥 तुझा परमनंट WHATSAPP PAIRING CODE आहे: ", pairingCode);
+    console.log("\n👉 मोबाईलच्या WhatsApp > Linked Devices मध्ये जाऊन हा कोड टाक भावा!\n");
   } catch (err) {
     console.error("❌ Pairing Code Error:", err.message);
-    pairingCodeRequested = false; // एरर आल्यास पुन्हा प्रयत्न करण्यासाठी
+    pairingCodeRequested = false;
   }
 });
 
 client.on("ready", () => {
   console.log("✅ WhatsApp Bot यशस्वीरित्या कनेक्ट झाला आहे आणि रेडी आहे! 🚀");
+});
+
+// रिमोट सेशन यशस्वीरित्या सेव्ह झाल्यावर मेसेज दाखवण्यासाठी
+client.on('remote_auth_success', () => {
+  console.log('💾 लॉगिन सेशन डेटाबेसमध्ये यशस्वीरित्या सुरक्षित सेव्ह झाला आहे!');
 });
 
 client.on('disconnected', (reason) => {
@@ -63,28 +123,24 @@ client.on('disconnected', (reason) => {
 
 client.initialize();
 
-// 🛢️ MySQL डेटाबेस कनेक्शन
-const db = mysql.createPool({
-  host: "mysql-3a8a9382-yash721950-fa6f.b.aivencloud.com",      
-  port: 27814,
-  user: "avnadmin",           
-  password: process.env.DB_PASSWORD, 
-  database: "defaultdb",
-  waitForConnections: true,
-  connectionLimit: 10,
-  queueLimit: 0,
-  ssl: {
-    rejectUnauthorized: false
-  }
-});
-
+// डेटाबेस टेबल्स तयार करणे
 db.getConnection((err, connection) => {
   if (err) {
     console.error("❌ MySQL डेटाबेस कनेक्शन फेल:", err.message);
   } else {
     console.log("✅ MySQL डेटाबेस यशस्वीरित्या कनेक्ट झाला! 🛢️");
     
-    const createTableQuery = `
+    // १. सेशन सेव्ह करण्यासाठी टेबल
+    const createSessionTable = `
+      CREATE TABLE IF NOT EXISTS wa_sessions (
+        session_id VARCHAR(255) PRIMARY KEY,
+        data LONGTEXT NOT NULL,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      );
+    `;
+    
+    // २. विद्यार्थ्यांसाठी टेबल
+    const createStudentsTable = `
       CREATE TABLE IF NOT EXISTS bca_students (
         id INT AUTO_INCREMENT PRIMARY KEY,
         phone VARCHAR(15) UNIQUE NOT NULL,
@@ -94,9 +150,11 @@ db.getConnection((err, connection) => {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
     `;
-    connection.query(createTableQuery, (tableErr) => {
-      connection.release();
-      if (tableErr) console.error("❌ टेबल तयार करताना एरर आला:", tableErr.message);
+
+    connection.query(createSessionTable, () => {
+      connection.query(createStudentsTable, () => {
+        connection.release();
+      });
     });
   }
 });
@@ -168,7 +226,6 @@ app.post("/api/subscribe", (req, res) => {
 
   const studentEnroll = String(enroll_no).trim().toUpperCase(); 
   if (!allowedEnrollments.includes(studentEnroll)) {
-    console.log(`⚠️ अनधिकृत प्रवेशाचा प्रयत्न! Enrollment: ${studentEnroll}`);
     return res.status(403).send("Access Denied.");
   }
 
@@ -181,7 +238,6 @@ app.post("/api/subscribe", (req, res) => {
       if (checkErr) return res.status(500).send("Database Error.");
 
       if (results.length > 0) {
-        console.log(`ℹ️ User already registered: ${studentEnroll}`);
         return res.status(409).send("Already Registered.");
       }
 
@@ -189,11 +245,8 @@ app.post("/api/subscribe", (req, res) => {
       db.query(sql, [cleanPhone, name, studentEnroll, sem], (err, result) => {
         if (err) return res.status(500).send("Database Error.");
         
-        console.log(`🚀 Successfully registered student: ${name} (${studentEnroll})`);
-        
         const welcomeMessage = `🎉 *Registration Successful!*\n\nHi ${name},\nYour registration on *BCA Alerts* portal is successful! 🎓`;
         sendWhatsAppAlert(cleanPhone, welcomeMessage);
-
         res.sendStatus(200);
       });
     });
@@ -206,7 +259,6 @@ cron.schedule("* * * * *", () => {
   const nowInIndia = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
   const days = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
   const currentDay = days[nowInIndia.getDay()];
-
   const currentHours = String(nowInIndia.getHours()).padStart(2, '0');
   const currentMinutes = String(nowInIndia.getMinutes()).padStart(2, '0');
   const currentTimeStr = `${currentHours}:${currentMinutes}`;
@@ -214,17 +266,13 @@ cron.schedule("* * * * *", () => {
   if (currentDay === "SAT" || currentDay === "SUN") {
     if (currentTimeStr === "11:10") {
       const holidayKey = `${currentDay}-holiday-1110`;
-      
       if (!sentAlertsLog[holidayKey]) {
         db.query("SELECT phone FROM bca_students", (err, results) => {
           if (err || results.length === 0) return;
-
           results.forEach(row => {
-            const holidayMessage = "😎 *BCA Alerts*:\n\nIt's your holiday! Enjoy your day! 🎉";
-            sendWhatsAppAlert(row.phone, holidayMessage);
+            sendWhatsAppAlert(row.phone, "😎 *BCA Alerts*:\n\nIt's your holiday! Enjoy your day! 🎉");
           });
         });
-
         sentAlertsLog[holidayKey] = true;
       }
     }
@@ -232,45 +280,25 @@ cron.schedule("* * * * *", () => {
   }
 
   const currentSchedule = timetable[currentDay] || [];
-  
   const upcomingLecture = currentSchedule.find((l) => {
     const [lHours, lMinutes] = l.start.split(":");
     const lectureTime = new Date(nowInIndia);
     lectureTime.setHours(parseInt(lHours), parseInt(lMinutes), 0, 0);
-
     const diffInMinutes = (lectureTime - nowInIndia) / (1000 * 60);
     return diffInMinutes > 5 && diffInMinutes <= 10;
   });
 
   if (upcomingLecture) {
     const alertKey = `${currentDay}-${upcomingLecture.start}`;
-
     if (!sentAlertsLog[alertKey]) {
       db.query("SELECT phone FROM bca_students", (err, results) => {
-        if (err) return;
-
-        if (results.length > 0) {
-          results.forEach(row => {
-            const alertMessage = `📢 *BCA Class Alert* 🎓\n\n📚 *Subject:* ${upcomingLecture.subject}\n👨‍🏫 *Teacher:* ${upcomingLecture.teacher}\n⏰ *Time:* ${upcomingLecture.start}`;
-            sendWhatsAppAlert(row.phone, alertMessage);
-          });
-          console.log(`📢 Lecture Alerts sent via WhatsApp at ${currentTimeStr}`);
-        }
+        if (err || results.length === 0) return;
+        results.forEach(row => {
+          const alertMessage = `📢 *BCA Class Alert* 🎓\n\n📚 *Subject:* ${upcomingLecture.subject}\n👨‍🏫 *Teacher:* ${upcomingLecture.teacher}\n⏰ *Time:* ${upcomingLecture.start}`;
+          sendWhatsAppAlert(row.phone, alertMessage);
+        });
       });
-
       sentAlertsLog[alertKey] = true;
-    }
-  }
-
-  for (const key in sentAlertsLog) {
-    if (key.includes("holiday")) continue; 
-    
-    const [day, startTime] = key.split("-");
-    if (day === currentDay) {
-      const [lHours, lMinutes] = startTime.split(":");
-      const lectureTime = new Date(nowInIndia);
-      lectureTime.setHours(parseInt(lHours), parseInt(lMinutes), 0, 0);
-      if (nowInIndia > lectureTime) delete sentAlertsLog[key];
     }
   }
 }, {
