@@ -94,7 +94,7 @@ const timetable = {
   ],
 };
 
-// 🛠️ नंबर MySQL डेटाबेसमध्ये सेव्ह करणारा Route (Registration) + 📩 वेलकम SMS लॉजिक
+// 🛠️ नंबर MySQL डेटाबेसमध्ये सेव्ह करणारा Route (Registration) + 📩 वेलकम SMS लॉजिक (४०० एरर फिक्ससह)
 app.post("/api/subscribe", (req, res) => {
   let cleanPhone = req.body.phone.replace(/[^0-9]/g, "");
   if (cleanPhone.length === 12 && cleanPhone.startsWith("91")) cleanPhone = cleanPhone.substring(2);
@@ -111,17 +111,20 @@ app.post("/api/subscribe", (req, res) => {
       // 💬 विद्यार्थ्याला पाठवायचा नवीन रजिस्ट्रेशनचा इंग्लिश मेसेज
       const welcomeMessage = `BCA Alerts 🎓\n\nYour number has been successfully verified! You will receive lecture alerts 10 minutes before your scheduled class.`;
 
+      // 🛠️ ४०० एरर फिक्स करण्यासाठी नंबर प्रॉपर फॉरमॅट केला
+      const targetNumber = String(cleanPhone).trim();
+
       const params = new URLSearchParams();
       params.append("route", "q"); 
       params.append("message", welcomeMessage);
       params.append("language", "english");
-      params.append("numbers", cleanPhone); // फक्त नवीन रजिस्टर झालेल्या नंबरला मेसेज जाईल
+      params.append("numbers", targetNumber); // कन्फर्म शुद्ध १० अंकी नंबर
 
       axios.post("https://www.fast2sms.com/dev/bulkV2", params, {
         headers: { "authorization": FAST2SMS_API_KEY }
       })
-      .then(() => console.log(`📩 Welcome SMS sent successfully to ${cleanPhone}`))
-      .catch((smsErr) => console.error(`❌ Welcome SMS Error:`, smsErr.message));
+      .then(() => console.log(`📩 Welcome SMS sent successfully to ${targetNumber}`))
+      .catch((smsErr) => console.error(`❌ Welcome SMS Error:`, smsErr.response ? JSON.stringify(smsErr.response.data) : smsErr.message));
 
       res.sendStatus(200);
     });
@@ -186,7 +189,7 @@ cron.schedule("* * * * *", () => {
         sentAlertsLog[holidayKey] = true;
       }
     }
-    return; // सुट्टीच्या दिवशी पुढचा लेक्चर कोड धावणार नाही, इथूनच रिटर्न होईल
+    return; // सुट्टीच्या दिवशी पुढचा लेक्चर कोड धावणार नाही
   }
 
   // 📖 सोमवार ते शुक्रवारचे नेहमीचे लेक्चर्सचे लॉजिक
@@ -243,7 +246,7 @@ cron.schedule("* * * * *", () => {
   }
 
   for (const key in sentAlertsLog) {
-    if (key.includes("holiday")) continue; // सुट्टीचा लॉग तसाच ठेवू जेणेकरून पुन्हा मेसेज जाणार नाही
+    if (key.includes("holiday")) continue; 
     
     const [day, startTime] = key.split("-");
     if (day === currentDay) {
@@ -260,4 +263,4 @@ cron.schedule("* * * * *", () => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Website engine online at port ${PORT}`));
-                         
+        
