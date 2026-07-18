@@ -101,10 +101,9 @@ const MySQLStore = {
 };
 
 let isBotReady = false;
-let currentPairingCode = null;
 let currentQrUrl = null;
 
-// 🟢 WhatsApp Client Setup (Railway फ्रेंडली विदाऊट हार्डकोडेड क्रोम पाथ)
+// 🟢 WhatsApp Client Setup (Render फ्रेंडली विथ क्रोम पाथ)
 const client = new Client({
   authStrategy: new RemoteAuth({
     clientId: "bca_bot_session",
@@ -117,6 +116,7 @@ const client = new Client({
   },
   puppeteer: { 
     headless: true,
+    executablePath: '/usr/bin/google-chrome-stable', 
     args: [
       '--no-sandbox', 
       '--disable-setuid-sandbox', 
@@ -126,53 +126,37 @@ const client = new Client({
   }
 });
 
-// 📲 सुरक्षित Pairing Code जनरेशन
-let pairingCodeRequested = false;
-client.on("qr", async (qr) => {
+// QR कोड इव्हेंट
+client.on("qr", (qr) => {
+  console.log("📸 नवीन QR कोड जनरेट झाला आहे!");
   currentQrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(qr)}`;
-  
-  if (isBotReady || pairingCodeRequested) return;
-  pairingCodeRequested = true;
-
-  console.log("---------------------------------------------------------");
-  console.log("⏳ सर्व्हर स्थिर होत आहे, १० सेकंद थांबा...");
-  console.log("---------------------------------------------------------");
-  
-  await new Promise(resolve => setTimeout(resolve, 10000));
-
-  if (isBotReady) return;
-
-  try {
-    const myPhoneNumber = "917219502467"; 
-    console.log("📞 पेअरिंग कोडची रिक्वेस्ट पाठवत आहे...");
-    const pairingCode = await client.requestPairingCode(myPhoneNumber);
-    currentPairingCode = pairingCode;
-    console.log("\n=================================================");
-    console.log("🔥 तुझा WHATSAPP PAIRING CODE: ", pairingCode);
-    console.log("=================================================\n");
-  } catch (err) {
-    console.error("❌ Pairing Code Error:", err.message);
-    pairingCodeRequested = false; 
-  }
 });
 
-// 🌐 बॅकअप वेब पेज (पेअरिंग कोड आणि QR कोड दोन्ही पाहण्यासाठी)
+// 🌐 QR कोड पाहण्यासाठी स्पेशल लिंक
 app.get("/qr", (req, res) => {
   if (isBotReady) {
     res.send(`
       <div style="text-align: center; margin-top: 50px; font-family: Arial, sans-serif;">
         <h2 style="color: green;">✅ WhatsApp Bot यशस्वीरित्या कनेक्टेड आहे!</h2>
-        <p style="font-size: 18px;">आता कोड टाकण्याची गरज नाही, बॉट बॅकग्राउंडला सुसाट चालू आहे भावा! 😎</p>
+        <p>आता स्कॅन करायची गरज नाही, बॉट चालू आहे भावा! 😎</p>
+      </div>
+    `);
+  } else if (currentQrUrl) {
+    res.send(`
+      <div style="text-align: center; margin-top: 50px; font-family: Arial, sans-serif;">
+        <h2>📸 BCA Alert Bot - WhatsApp Login</h2>
+        <p>तुझ्या मोबाईलच्या WhatsApp > Linked Devices मध्ये जाऊन हा QR कोड स्कॅन कर भावा:</p>
+        <div style="margin: 20px auto; padding: 20px; border: 2px dashed #075E54; display: inline-block; background: #f9f9f9; border-radius: 10px;">
+          <img src="${currentQrUrl}" alt="WhatsApp QR Code" style="width: 300px; height: 300px;" />
+        </div>
+        <p style="color: #666;">💡 टीप: ही लिंक लॅपटॉपवर किंवा दुसऱ्या कोणाच्या फोनवर उघडून तू स्वतःच्या फोनने QR स्कॅन करू शकतोस!</p>
       </div>
     `);
   } else {
     res.send(`
       <div style="text-align: center; margin-top: 50px; font-family: Arial, sans-serif;">
-        <h2>📸 BCA Alert Bot - Authentication</h2>
-        ${currentPairingCode ? `<h1 style="color: #075E54; background: #e1ffeb; display: inline-block; padding: 10px 20px; border-radius: 5px; font-size: 36px; letter-spacing: 5px;">${currentPairingCode}</h1><p>नंबर लिंक करताना वरील <b>पेअरिंग कोड</b> तुझ्या व्हॉट्सॲपमध्ये टाक भावा.</p>` : `<p>⏳ पेअरिंग कोड जनरेट होत आहे, काही सेकंद थांबा...</p>`}
-        <hr style="width: 50%; margin: 30px auto; border: 1px dashed #ccc;"/>
-        <h3>किंवा QR कोड स्कॅन कर:</h3>
-        ${currentQrUrl ? `<img src="${currentQrUrl}" style="border: 2px solid #333; padding: 10px; border-radius: 10px;"/>` : `<p>QR कोड लोड होत आहे...</p>`}
+        <h2>⏳ कृपया ३० सेकंद थांबा...</h2>
+        <p>सर्व्हर सुरू होत आहे आणि QR कोड जनरेट करत आहे... पेज थोड्या वेळाने रिफ्रेश कर भावा.</p>
       </div>
     `);
   }
@@ -181,8 +165,6 @@ app.get("/qr", (req, res) => {
 client.on("ready", () => {
   console.log("✅ WhatsApp Bot यशस्वीरित्या कनेक्ट झाला आहे आणि रेडी आहे! 🚀");
   isBotReady = true;
-  pairingCodeRequested = false;
-  currentPairingCode = null;
   currentQrUrl = null;
 });
 
@@ -193,17 +175,14 @@ client.on('remote_auth_success', () => {
 client.on('auth_failure', (msg) => {
   console.error('❌ Authentication फेल झालं:', msg);
   isBotReady = false;
-  pairingCodeRequested = false;
 });
 
 client.on('disconnected', (reason) => {
   console.log('❌ WhatsApp डिसकनेक्ट झालं! पुन्हा कनेक्ट करत आहे...', reason);
   isBotReady = false;
-  pairingCodeRequested = false;
   setTimeout(() => { client.initialize(); }, 5000);
 });
 
-// प्रोसेस क्रॅश होण्यापासून वाचवण्यासाठी ग्लोबल एरर हँडलर
 process.on('uncaughtException', (err) => {
   console.error('⚠️ Uncaught Exception रोखली:', err.message);
 });
