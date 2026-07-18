@@ -81,46 +81,49 @@ const client = new Client({
   }
 });
 
-// 📲 सुरक्षित Pairing Code जनरेशन (१० सेकंदाचा डिले)
-let pairingCodeRequested = false;
-client.on("qr", async (qr) => {
-  if (pairingCodeRequested) return;
-  pairingCodeRequested = true;
+// QR कोड इमेज स्टोअर करण्यासाठी व्हेरिएबल
+let latestQrImage = null;
 
-  console.log("---------------------------------------------------------");
-  console.log("⏳ व्हॉट्सॲप सर्व्हरशी जोडणी होत आहे, १० सेकंद थांबा...");
-  console.log("---------------------------------------------------------");
-  
-  await new Promise(resolve => setTimeout(resolve, 10000));
+client.on("qr", (qr) => {
+  console.log("📸 नवीन QR कोड जनरेट झाला आहे! कृपया वेबसाईटवर जाऊन स्कॅन करा.");
+  // गुगल API चा वापर करून QR कोडला सरळ इमेजमध्ये बदलले
+  latestQrImage = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(qr)}`;
+});
 
-  try {
-    const myPhoneNumber = "917219502467"; 
-    const pairingCode = await client.requestPairingCode(myPhoneNumber);
-    console.log("\n=================================================");
-    console.log("🔥 तुझा WHATSAPP PAIRING CODE: ", pairingCode);
-    console.log("=================================================\n");
-  } catch (err) {
-    console.error("❌ Pairing Code Error (Retrying):", err.message);
-    pairingCodeRequested = false; 
+// 🌐 QR कोड दाखवण्यासाठी स्पेशल वेब लिंक (/qr)
+app.get("/qr", (req, res) => {
+  if (latestQrImage) {
+    res.send(`
+      <div style="text-align: center; margin-top: 50px; font-family: Arial, sans-serif;">
+        <h2>📸 BCA Alert Bot - WhatsApp Login</h2>
+        <p>तुझ्या मोबाईलच्या WhatsApp > Linked Devices मध्ये जाऊन हा QR कोड स्कॅन कर भावा:</p>
+        <div style="margin: 20px auto; padding: 20px; border: 2px dashed #075E54; display: inline-block; background: #f9f9f9; border-radius: 10px;">
+          <img src="${latestQrImage}" alt="WhatsApp QR Code" style="width: 300px; height: 300px;" />
+        </div>
+        <p style="color: red; font-weight: bold;">⚠️ टीप: स्कॅन केल्यावर व्हॉट्सॲप कनेक्ट होईल आणि हा कोड गायब होईल!</p>
+      </div>
+    `);
+  } else {
+    res.send(`
+      <div style="text-align: center; margin-top: 50px; font-family: Arial, sans-serif;">
+        <h2>⏳ कृपया १-२ मिनिटे थांबा...</h2>
+        <p>सर्व्हर बॅकग्राउंडला सुरू होत आहे किंवा तुझा बॉट आधीपासूनच यशस्वीरित्या कनेक्टेड आहे! जर कनेक्ट नसेल, तर पेज रिफ्रेश करून बघ भावा.</p>
+      </div>
+    `);
   }
 });
 
 client.on("ready", () => {
   console.log("✅ WhatsApp Bot यशस्वीरित्या कनेक्ट झाला आहे आणि रेडी आहे! 🚀");
+  latestQrImage = null; // कनेक्ट झाल्यावर इमेज क्लिअर करा
 });
 
 client.on('remote_auth_success', () => {
   console.log('💾 लॉगिन सेशन डेटाबेसमध्ये सुरक्षित सेव्ह झालं!');
 });
 
-client.on('auth_failure', (msg) => {
-  console.error('❌ Authentication फेल झालं:', msg);
-  pairingCodeRequested = false;
-});
-
 client.on('disconnected', (reason) => {
   console.log('❌ WhatsApp डिसकनेक्ट झालं! पुन्हा कनेक्ट करत आहे...', reason);
-  pairingCodeRequested = false;
   client.initialize();
 });
 
