@@ -58,6 +58,8 @@ const MySQLStore = {
   }
 };
 
+let isBotReady = false;
+
 // 🟢 WhatsApp Client Setup
 const client = new Client({
   authStrategy: new RemoteAuth({
@@ -81,41 +83,35 @@ const client = new Client({
   }
 });
 
-// QR कोड इमेज स्टोअर करण्यासाठी व्हेरिएबल
-let latestQrImage = null;
+// 📲 सुरक्षित Pairing Code जनरेशन (१० सेकंदाच्या डिले आणि ट्राय-कॅचसह)
+let pairingCodeRequested = false;
+client.on("qr", async (qr) => {
+  if (pairingCodeRequested) return;
+  pairingCodeRequested = true;
 
-client.on("qr", (qr) => {
-  console.log("📸 नवीन QR कोड जनरेट झाला आहे! कृपया वेबसाईटवर जाऊन स्कॅन करा.");
-  // गुगल API चा वापर करून QR कोडला सरळ इमेजमध्ये बदलले
-  latestQrImage = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(qr)}`;
-});
+  console.log("---------------------------------------------------------");
+  console.log("⏳ सर्व्हर स्थिर होत आहे, १० सेकंद थांबा... पेअरिंग कोड जनरेट होत आहे...");
+  console.log("---------------------------------------------------------");
+  
+  // व्हॉट्सॲपला ब्लॉक करण्यापासून रोखण्यासाठी आणि लायब्ररी स्थिर करण्यासाठी १० सेकंदाचा डिले
+  await new Promise(resolve => setTimeout(resolve, 10000));
 
-// 🌐 QR कोड दाखवण्यासाठी स्पेशल वेब लिंक (/qr)
-app.get("/qr", (req, res) => {
-  if (latestQrImage) {
-    res.send(`
-      <div style="text-align: center; margin-top: 50px; font-family: Arial, sans-serif;">
-        <h2>📸 BCA Alert Bot - WhatsApp Login</h2>
-        <p>तुझ्या मोबाईलच्या WhatsApp > Linked Devices मध्ये जाऊन हा QR कोड स्कॅन कर भावा:</p>
-        <div style="margin: 20px auto; padding: 20px; border: 2px dashed #075E54; display: inline-block; background: #f9f9f9; border-radius: 10px;">
-          <img src="${latestQrImage}" alt="WhatsApp QR Code" style="width: 300px; height: 300px;" />
-        </div>
-        <p style="color: red; font-weight: bold;">⚠️ टीप: स्कॅन केल्यावर व्हॉट्सॲप कनेक्ट होईल आणि हा कोड गायब होईल!</p>
-      </div>
-    `);
-  } else {
-    res.send(`
-      <div style="text-align: center; margin-top: 50px; font-family: Arial, sans-serif;">
-        <h2>⏳ कृपया १-२ मिनिटे थांबा...</h2>
-        <p>सर्व्हर बॅकग्राउंडला सुरू होत आहे किंवा तुझा बॉट आधीपासूनच यशस्वीरित्या कनेक्टेड आहे! जर कनेक्ट नसेल, तर पेज रिफ्रेश करून बघ भावा.</p>
-      </div>
-    `);
+  try {
+    const myPhoneNumber = "917219502467"; 
+    const pairingCode = await client.requestPairingCode(myPhoneNumber);
+    console.log("\n=================================================");
+    console.log("🔥 तुझा WHATSAPP PAIRING CODE: ", pairingCode);
+    console.log("=================================================\n");
+  } catch (err) {
+    console.error("❌ Pairing Code Error (Retrying):", err.message);
+    // एरर आल्यास ५ सेकंदाने पुन्हा प्रयत्न करण्यासाठी फ्लॅग रिसेट केला
+    setTimeout(() => { pairingCodeRequested = false; }, 5000);
   }
 });
 
 client.on("ready", () => {
   console.log("✅ WhatsApp Bot यशस्वीरित्या कनेक्ट झाला आहे आणि रेडी आहे! 🚀");
-  latestQrImage = null; // कनेक्ट झाल्यावर इमेज क्लिअर करा
+  isBotReady = true;
 });
 
 client.on('remote_auth_success', () => {
@@ -124,6 +120,8 @@ client.on('remote_auth_success', () => {
 
 client.on('disconnected', (reason) => {
   console.log('❌ WhatsApp डिसकनेक्ट झालं! पुन्हा कनेक्ट करत आहे...', reason);
+  isBotReady = false;
+  pairingCodeRequested = false;
   client.initialize();
 });
 
@@ -203,8 +201,8 @@ const timetable = {
     { start: "12:45", subject: "Lab on Ecommerce", teacher: "Dr. Shailesh R. Thakare" },
     { start: "13:45", subject: "Advance Excel", teacher: "Prof. Pranav A. Dhabarde" },
     { start: "15:00", subject: "Physical Education", teacher: "Dr. Amar More" },
-    { start: "16:00", subject: "Physical Education", teacher: "Dr. Amar More" },
-  ],
+    { start: "16:00", text: "Library", teacher: "Library Staff" }
+  ]
 };
 
 const allowedEnrollments = [];
@@ -214,10 +212,11 @@ for (let i = 1; i <= 80; i++) {
 }
 
 function sendWhatsAppAlert(phoneNumber, messageText) {
+  if (!isBotReady) return;
   const formattedNumber = `${phoneNumber}@c.us`; 
   client.sendMessage(formattedNumber, messageText)
     .then(() => console.log(`📩 WhatsApp मेसेज ${phoneNumber} ला पाठवला!`))
-    .catch((err) => console.error(`❌ WhatsApp Send Error for ${phoneNumber}:`, err.message));
+    .catch((err) => console.error(`❌ WhatsApp Send Error:`, err.message));
 }
 
 app.post("/api/subscribe", (req, res) => {
@@ -251,6 +250,8 @@ app.post("/api/subscribe", (req, res) => {
 });
 
 cron.schedule("* * * * *", () => {
+  if (!isBotReady) return;
+
   const nowInIndia = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
   const days = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
   const currentDay = days[nowInIndia.getDay()];
@@ -289,7 +290,7 @@ cron.schedule("* * * * *", () => {
       db.query("SELECT phone FROM bca_students", (err, results) => {
         if (err || results.length === 0) return;
         results.forEach(row => {
-          const alertMessage = `📢 *BCA Class Alert* 🎓\n\n📚 *Subject:* ${upcomingLecture.subject}\n👨‍🏫 *Teacher:* ${upcomingLecture.teacher}\n⏰ *Time:* ${upcomingLecture.start}`;
+          const alertMessage = `📢 *BCA Class Alert* 🎓\n\n📚 *Subject:* ${upcomingLecture.subject}\n👨‍🏫 *Teacher:* ${upcomingLecture.teacher}\n⏰ *Time:*${upcomingLecture.start}`;
           sendWhatsAppAlert(row.phone, alertMessage);
         });
       });
