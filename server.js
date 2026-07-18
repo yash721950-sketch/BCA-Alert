@@ -8,10 +8,9 @@ const app = express();
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
 
-// 🔑 तुझी Fast2SMS API Key (Render Environment Variable मधून ऑटोमॅटिक उचलली जाईल)
+// 🔑 API Key फिक्स (चुकीची नावं सगळी काढून टाकली)
 const FAST2SMS_API_KEY = process.env.FAST2SMS_API_KEY || "3AlbuU40tVZodDdi0avMxTI3U05B8UfaMd6g1tOrbSFon0peTuKTN8v13G3I"; 
 
-// 🛢️ MySQL डेटाबेस कनेक्शन (Aiven चे लाईव्ह डिटेल्स डायरेक्ट ॲड केले आहेत)
 const db = mysql.createPool({
   host: "mysql-3a8a9382-yash721950-fa6f.b.aivencloud.com",      
   port: 27814,
@@ -26,14 +25,12 @@ const db = mysql.createPool({
   }
 });
 
-// डेटाबेस चालू आहे की नाही हे तपासण्यासाठी
 db.getConnection((err, connection) => {
   if (err) {
     console.error("❌ MySQL डेटाबेस कनेक्शन फेल:", err.message);
   } else {
     console.log("✅ MySQL डेटाबेस यशस्वीरित्या कनेक्ट झाला! 🛢️");
     
-    // 🛠️ 'bca_students' नाव दिले जेणेकरून नवीन कॉलम्ससह फ्रेश टेबल बनेल!
     const createTableQuery = `
       CREATE TABLE IF NOT EXISTS bca_students (
         id INT AUTO_INCREMENT PRIMARY KEY,
@@ -53,7 +50,6 @@ db.getConnection((err, connection) => {
 
 let sentAlertsLog = {}; 
 
-// २. टाईमटेबल डेटा
 const timetable = {
   MON: [
     { start: "10:00", subject: "Advance Excel Lab", teacher: "Prof. Pranav A. Dhabarde" },
@@ -97,14 +93,12 @@ const timetable = {
   ],
 };
 
-// 🛠️ GHRUA25011140001 ते GHRUA25011140080 पर्यंत ऑटोमॅटिक लिस्ट (4 फिक्स ठेवून)
 const allowedEnrollments = [];
 for (let i = 1; i <= 80; i++) {
   const paddedNumber = String(i).padStart(4, '0');
   allowedEnrollments.push(`GHRUA2501114${paddedNumber}`);
 }
 
-// 🛠️ सुरक्षित रजिस्ट्रेशन राऊट (डुप्लिकेट चेकिंगसह)
 app.post("/api/subscribe", (req, res) => {
   const { phone, name, enroll_no, sem } = req.body;
 
@@ -115,49 +109,39 @@ app.post("/api/subscribe", (req, res) => {
   const studentEnroll = String(enroll_no).trim().toUpperCase(); 
   if (!allowedEnrollments.includes(studentEnroll)) {
     console.log(`⚠️ अनधिकृत प्रवेशाचा प्रयत्न! Enrollment: ${studentEnroll}`);
-    return res.status(403).send("Access Denied: Your Enrollment Number is not in our whitelist.");
+    return res.status(403).send("Access Denied.");
   }
 
   let cleanPhone = phone.replace(/[^0-9]/g, "");
   if (cleanPhone.length === 12 && cleanPhone.startsWith("91")) cleanPhone = cleanPhone.substring(2);
 
   if (cleanPhone.length === 10) {
-    // 🔍 आधी चेक करूया की हा युझर आधीपासून डेटाबेसमध्ये आहे का
     const checkSql = "SELECT * FROM bca_students WHERE phone = ? OR enroll_no = ?";
     db.query(checkSql, [cleanPhone, studentEnroll], (checkErr, results) => {
-      if (checkErr) {
-        console.error("❌ चेक करताना डेटाबेस एरर:", checkErr.message);
-        return res.status(500).send("Database Error.");
-      }
+      if (checkErr) return res.status(500).send("Database Error.");
 
-      // ⚠️ जर आधीच रेकॉर्ड सापडला तर 409 (Conflict) स्टेटस कोड पाठवायचा
       if (results.length > 0) {
         console.log(`ℹ️ User already registered: ${studentEnroll}`);
         return res.status(409).send("Already Registered.");
       }
 
-      // 💾 जर नवीन युझर असेल तरच डेटाबेसमध्ये टाकायचा
       const sql = "INSERT INTO bca_students (phone, name, enroll_no, sem) VALUES (?, ?, ?, ?)";
       db.query(sql, [cleanPhone, name, studentEnroll, sem], (err, result) => {
-        if (err) {
-          console.error("❌ डेटाबेसमध्ये नंबर सेव्ह करताना एरर:", err.message);
-          return res.status(500).send("Database Error.");
-        }
+        if (err) return res.status(500).send("Database Error.");
         
         console.log(`🚀 Successfully verified & registered student: ${name} (${studentEnroll})`);
         
-        // 🛠️ मेसेज सरळ एका ओळीत केला (400 bad request एरर फिक्स)
-        const welcomeMessage = `BCA Alerts: Hi ${name}, your number is verified! You will receive lecture alerts 10 minutes before your class.`;
-        const targetNumber = String(cleanPhone).trim();
-
+        // 🛠️ मेसेज एकदम सोपा आणि अडथळा नसलेला केला जेणेकरून Fast2SMS रिजेक्ट करणार नाही
+        const welcomeMessage = `Welcome to BCA Alerts! Hi ${name}, your registration is successful. You will get class alerts on this number.`;
+        
         const params = new URLSearchParams();
         params.append("route", "q"); 
         params.append("message", welcomeMessage);
         params.append("language", "english");
-        params.append("numbers", targetNumber);
+        params.append("numbers", String(cleanPhone).trim());
 
         axios.post("https://www.fast2sms.com/dev/bulkV2", params, {
-          headers: { "authorization": FAST2SMS_API_KEY } // 🛠️ स्पेलिंग मिस्टेक फिक्स केली
+          headers: { "authorization": FAST2SMS_API_KEY } // 🛠️ फिक्स API Key व्हेरीअबल
         })
         .then(() => console.log(`📩 Welcome SMS sent successfully to ${name}`))
         .catch((smsErr) => console.error(`❌ Welcome SMS Error:`, smsErr.message));
@@ -170,10 +154,9 @@ app.post("/api/subscribe", (req, res) => {
   }
 });
 
-// 🧪 डेमो मेसेज तपासण्यासाठी रस्ता
 app.get("/api/test-sms", (req, res) => {
   const testNumber = "7219502467"; 
-  const demoMessage = `BCA Lecture Alert: Test message from portal active now.`;
+  const demoMessage = `BCA Lecture Portal is active now. Test message success.`;
 
   const params = new URLSearchParams();
   params.append("route", "q"); 
@@ -188,7 +171,6 @@ app.get("/api/test-sms", (req, res) => {
   .catch((err) => res.status(500).send("Fast2SMS Error: " + (err.response ? JSON.stringify(err.response.data) : err.message)));
 });
 
-// 🚀 ३. Automation Cron (दर मिनिटाला धावतो)
 cron.schedule("* * * * *", () => {
   const nowInIndia = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
   const days = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
@@ -251,7 +233,7 @@ cron.schedule("* * * * *", () => {
         }
 
         if (results.length > 0) {
-          const alertMessage = `BCA Lecture Alert: ${upcomingLecture.subject} by ${upcomingLecture.teacher} at ${upcomingLecture.start} in Room 105.`;
+          const alertMessage = `BCA Class Alert: ${upcomingLecture.subject} by ${upcomingLecture.teacher} starting at ${upcomingLecture.start}.`;
           const allNumbers = results.map(row => row.phone).join(",");
 
           const params = new URLSearchParams();
@@ -290,4 +272,3 @@ cron.schedule("* * * * *", () => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Website engine online at port ${PORT}`));
-               
