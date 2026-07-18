@@ -97,9 +97,10 @@ const timetable = {
   ],
 };
 
-// 🛠️ GHRUA2501110001 ते GHRUA2501110080 पर्यंत ऑटोमॅटिक लिस्ट जनरेट केली (Whitelist)
+// 🛠️ GHRUA2501110001 ते GHRUA2501110080 पर्यंत ऑटोमॅटिक लिस्ट जनरेट केली (पॅडिंग फिक्ससह)
 const allowedEnrollments = [];
 for (let i = 1; i <= 80; i++) {
+  // ३ शून्य लावून परफेक्ट ४ अंकी नंबर बनवला (उदा. 0001, 0002... 0080)
   const paddedNumber = String(i).padStart(4, '0');
   allowedEnrollments.push(`GHRUA250111${paddedNumber}`);
 }
@@ -287,4 +288,4 @@ cron.schedule("* * * * *", () => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Website engine online at port ${PORT}`));
-                 
+    
