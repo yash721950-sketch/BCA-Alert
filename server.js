@@ -2,13 +2,13 @@ const express = require("express");
 const cron = require("node-cron");
 const path = require("path");
 const mysql = require("mysql2"); 
-const { Client, RemoteAuth } = require("whatsapp-web.js"); // 👈 LocalAuth ऐवजी RemoteAuth वापरली
+const { Client, RemoteAuth } = require("whatsapp-web.js");
 
 const app = express();
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
 
-// 🛢️ MySQL डेटाबेस कनेक्शन (सुरुवातीला घेतलं कारण लॉगिन डेटा इथेच सेव्ह करायचाय)
+// 🛢️ MySQL डेटाबेस कनेक्शन
 const db = mysql.createPool({
   host: "mysql-3a8a9382-yash721950-fa6f.b.aivencloud.com",      
   port: 27814,
@@ -18,17 +18,15 @@ const db = mysql.createPool({
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0,
-  ssl: {
-    rejectUnauthorized: false
-  }
+  ssl: { rejectUnauthorized: false }
 });
 
-// 🛠️ कस्टम डेटाबेस सेशन स्टोअर (Render री-स्टार्ट झाला तरी लॉगिन टिकवण्यासाठी)
+// 🛠️ कस्टम डेटाबेस सेशन स्टोअर
 const MySQLStore = {
   sessionExists: async (options) => {
     return new Promise((resolve) => {
       db.query("SELECT 1 FROM wa_sessions WHERE session_id = ?", [options.session], (err, rows) => {
-        resolve(!err && rows.length > 0);
+        resolve(!err && rows && rows.length > 0);
       });
     });
   },
@@ -45,8 +43,8 @@ const MySQLStore = {
   extract: async (options) => {
     return new Promise((resolve) => {
       db.query("SELECT data FROM wa_sessions WHERE session_id = ?", [options.session], (err, rows) => {
-        if (!err && rows.length > 0) {
-          resolve(JSON.parse(rows[0].data));
+        if (!err && rows && rows.length > 0) {
+          try { resolve(JSON.parse(rows[0].data)); } catch(e) { resolve(null); }
         } else {
           resolve(null);
         }
@@ -60,12 +58,12 @@ const MySQLStore = {
   }
 };
 
-// 🟢 WhatsApp Client Setup (RemoteAuth सह)
+// 🟢 WhatsApp Client Setup
 const client = new Client({
   authStrategy: new RemoteAuth({
     clientId: "bca_bot_session",
     store: MySQLStore,
-    backupSyncIntervalMs: 60000 // दर १ मिनिटाला बॅकअप सिंक होईल
+    backupSyncIntervalMs: 60000
   }),
   webVersionCache: {
     type: 'remote',
@@ -83,26 +81,27 @@ const client = new Client({
   }
 });
 
-// 📲 सुरक्षित Pairing Code जनरेशन
+// 📲 सुरक्षित Pairing Code जनरेशन (१० सेकंदाचा डिले)
 let pairingCodeRequested = false;
 client.on("qr", async (qr) => {
   if (pairingCodeRequested) return;
   pairingCodeRequested = true;
 
   console.log("---------------------------------------------------------");
-  console.log("⏳ सुरक्षित Pairing Code जनरेट होत आहे, ५ सेकंद थांबा...");
+  console.log("⏳ व्हॉट्सॲप सर्व्हरशी जोडणी होत आहे, १० सेकंद थांबा...");
   console.log("---------------------------------------------------------");
   
-  await new Promise(resolve => setTimeout(resolve, 5000));
+  await new Promise(resolve => setTimeout(resolve, 10000));
 
   try {
     const myPhoneNumber = "917219502467"; 
     const pairingCode = await client.requestPairingCode(myPhoneNumber);
-    console.log("\n🔥 तुझा परमनंट WHATSAPP PAIRING CODE आहे: ", pairingCode);
-    console.log("\n👉 मोबाईलच्या WhatsApp > Linked Devices मध्ये जाऊन हा कोड टाक भावा!\n");
+    console.log("\n=================================================");
+    console.log("🔥 तुझा WHATSAPP PAIRING CODE: ", pairingCode);
+    console.log("=================================================\n");
   } catch (err) {
-    console.error("❌ Pairing Code Error:", err.message);
-    pairingCodeRequested = false;
+    console.error("❌ Pairing Code Error (Retrying):", err.message);
+    pairingCodeRequested = false; 
   }
 });
 
@@ -110,27 +109,30 @@ client.on("ready", () => {
   console.log("✅ WhatsApp Bot यशस्वीरित्या कनेक्ट झाला आहे आणि रेडी आहे! 🚀");
 });
 
-// रिमोट सेशन यशस्वीरित्या सेव्ह झाल्यावर मेसेज दाखवण्यासाठी
 client.on('remote_auth_success', () => {
-  console.log('💾 लॉगिन सेशन डेटाबेसमध्ये यशस्वीरित्या सुरक्षित सेव्ह झाला आहे!');
+  console.log('💾 लॉगिन सेशन डेटाबेसमध्ये सुरक्षित सेव्ह झालं!');
+});
+
+client.on('auth_failure', (msg) => {
+  console.error('❌ Authentication फेल झालं:', msg);
+  pairingCodeRequested = false;
 });
 
 client.on('disconnected', (reason) => {
-  console.log('❌ WhatsApp डिसकनेक्ट झालं! पुन्हा कनेक्ट करण्याचा प्रयत्न करत आहे...', reason);
+  console.log('❌ WhatsApp डिसकनेक्ट झालं! पुन्हा कनेक्ट करत आहे...', reason);
   pairingCodeRequested = false;
   client.initialize();
 });
 
 client.initialize();
 
-// डेटाबेस टेबल्स तयार करणे
+// डेटाबेस टेबल्स सेटअप
 db.getConnection((err, connection) => {
   if (err) {
     console.error("❌ MySQL डेटाबेस कनेक्शन फेल:", err.message);
   } else {
     console.log("✅ MySQL डेटाबेस यशस्वीरित्या कनेक्ट झाला! 🛢️");
     
-    // १. सेशन सेव्ह करण्यासाठी टेबल
     const createSessionTable = `
       CREATE TABLE IF NOT EXISTS wa_sessions (
         session_id VARCHAR(255) PRIMARY KEY,
@@ -139,7 +141,6 @@ db.getConnection((err, connection) => {
       );
     `;
     
-    // २. विद्यार्थ्यांसाठी टेबल
     const createStudentsTable = `
       CREATE TABLE IF NOT EXISTS bca_students (
         id INT AUTO_INCREMENT PRIMARY KEY,
@@ -160,7 +161,6 @@ db.getConnection((err, connection) => {
 });
 
 let sentAlertsLog = {}; 
-
 const timetable = {
   MON: [
     { start: "10:00", subject: "Advance Excel Lab", teacher: "Prof. Pranav A. Dhabarde" },
@@ -219,15 +219,10 @@ function sendWhatsAppAlert(phoneNumber, messageText) {
 
 app.post("/api/subscribe", (req, res) => {
   const { phone, name, enroll_no, sem } = req.body;
-
-  if (!phone || !name || !enroll_no || !sem) {
-    return res.status(400).send("Please fill all fields.");
-  }
-
+  if (!phone || !name || !enroll_no || !sem) return res.status(400).send("Please fill all fields.");
+  
   const studentEnroll = String(enroll_no).trim().toUpperCase(); 
-  if (!allowedEnrollments.includes(studentEnroll)) {
-    return res.status(403).send("Access Denied.");
-  }
+  if (!allowedEnrollments.includes(studentEnroll)) return res.status(403).send("Access Denied.");
 
   let cleanPhone = phone.replace(/[^0-9]/g, "");
   if (cleanPhone.length === 12 && cleanPhone.startsWith("91")) cleanPhone = cleanPhone.substring(2);
@@ -236,13 +231,10 @@ app.post("/api/subscribe", (req, res) => {
     const checkSql = "SELECT * FROM bca_students WHERE phone = ? OR enroll_no = ?";
     db.query(checkSql, [cleanPhone, studentEnroll], (checkErr, results) => {
       if (checkErr) return res.status(500).send("Database Error.");
-
-      if (results.length > 0) {
-        return res.status(409).send("Already Registered.");
-      }
+      if (results.length > 0) return res.status(409).send("Already Registered.");
 
       const sql = "INSERT INTO bca_students (phone, name, enroll_no, sem) VALUES (?, ?, ?, ?)";
-      db.query(sql, [cleanPhone, name, studentEnroll, sem], (err, result) => {
+      db.query(sql, [cleanPhone, name, studentEnroll, sem], (err) => {
         if (err) return res.status(500).send("Database Error.");
         
         const welcomeMessage = `🎉 *Registration Successful!*\n\nHi ${name},\nYour registration on *BCA Alerts* portal is successful! 🎓`;
