@@ -1,232 +1,256 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>GHRU Lecture Alerts Portal</title>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BCA Alerts | Secure Portal</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
     <style>
-      :root {
-        --primary: #0b3c5d;
-        --accent: #007bff; /* Changed from WhatsApp Green to SMS Blue */
-        --bg-gradient: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-        --card-bg: #ffffff;
-        --text-main: #2c3e50;
-        --text-muted: #7f8c8d;
-      }
-
-      body {
-        font-family:
-          "Segoe UI",
-          system-ui,
-          -apple-system,
-          sans-serif;
-        background: var(--bg-gradient);
-        min-height: 100vh;
-        margin: 0;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 20px;
-        box-sizing: border-box;
-      }
-
-      .portal-card {
-        background: var(--card-bg);
-        width: 100%;
-        max-width: 500px;
-        padding: 40px 30px;
-        border-radius: 16px;
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-        text-align: center;
-        transition: transform 0.3s ease;
-      }
-
-      .portal-card:hover {
-        transform: translateY(-5px);
-      }
-
-      .brand-header h1 {
-        color: var(--primary);
-        font-size: 1.8rem;
-        margin: 0 0 8px 0;
-        letter-spacing: -0.5px;
-      }
-
-      .brand-header p {
-        color: var(--text-muted);
-        font-size: 0.95rem;
-        margin: 0 0 24px 0;
-      }
-
-      .badge {
-        display: inline-block;
-        background: rgba(0, 123, 255, 0.15); /* Changed to Blue background */
-        color: #0056b3;
-        padding: 6px 14px;
-        border-radius: 20px;
-        font-size: 0.8rem;
-        font-weight: 700;
-        text-transform: uppercase;
-        margin-bottom: 30px;
-        letter-spacing: 0.5px;
-      }
-
-      .form-group {
-        text-align: left;
-        margin-bottom: 22px;
-      }
-
-      label {
-        display: block;
-        font-weight: 600;
-        font-size: 0.85rem;
-        color: var(--text-main);
-        margin-bottom: 8px;
-      }
-
-      input[type="tel"] {
-        width: 100%;
-        padding: 14px 16px;
-        border: 2px solid #e2e8f0;
-        border-radius: 8px;
-        font-size: 1rem;
-        color: var(--text-main);
-        transition: all 0.2s ease;
-        box-sizing: border-box;
-        background: #f8fafc;
-      }
-
-      input[type="tel"]:focus {
-        outline: none;
-        border-color: var(--primary);
-        background: #fff;
-        box-shadow: 0 0 0 4px rgba(11, 60, 93, 0.15);
-      }
-
-      .btn-action {
-        width: 100%;
-        padding: 15px;
-        background: var(--accent);
-        color: #ffffff;
-        border: none;
-        border-radius: 8px;
-        font-size: 1.05rem;
-        font-weight: 700;
-        cursor: pointer;
-        box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
-        transition: all 0.2s ease;
-        margin-top: 10px;
-      }
-
-      .btn-action:hover {
-        background: #0056b3;
-        box-shadow: 0 6px 16px rgba(0, 123, 255, 0.4);
-        transform: translateY(-1px);
-      }
-
-      .status-banner {
-        margin-top: 25px;
-        padding: 15px;
-        border-radius: 8px;
-        font-size: 0.9rem;
-        line-height: 1.4;
-        display: none;
-        animation: fadeIn 0.4s ease forwards;
-      }
-
-      .status-banner.success {
-        background: #d4edda;
-        color: #155724;
-        border: 1px solid #c3e6cb;
-      }
-
-      .status-banner.error {
-        background: #f8d7da;
-        color: #721c24;
-        border: 1px solid #f5c6cb;
-      }
-
-      @keyframes fadeIn {
-        from {
-          opacity: 0;
-          transform: translateY(10px);
+        :root {
+            --primary: #7b2cbf;       /* Vibrant Purple */
+            --primary-hover: #9d4edd; /* Light Purple */
+            --bg: #0a0a0c;            /* Rich Deep Black */
+            --card: #ffffff;          /* Pure White */
+            --text-dark: #1f1f23;     /* Dark Charcoal for text */
+            --text-muted: #75757a;    /* Muted Gray */
         }
-        to {
-          opacity: 1;
-          transform: translateY(0);
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
         }
-      }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: var(--bg);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            overflow: hidden;
+            padding: 20px;
+        }
+
+        /* Dynamic Background Glow Elements */
+        body::before, body::after {
+            content: '';
+            position: absolute;
+            width: 300px;
+            height: 300px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(123, 44, 191, 0.4) 0%, rgba(0,0,0,0) 70%);
+            z-index: 1;
+            animation: floatGlow 8s infinite alternate ease-in-out;
+        }
+        body::before { top: -50px; left: -50px; }
+        body::after { bottom: -50px; right: -50px; animation-delay: 4s; }
+
+        @keyframes floatGlow {
+            0% { transform: translate(0, 0) scale(1); }
+            100% { transform: translate(30px, 20px) scale(1.2); }
+        }
+
+        .container {
+            background: var(--card);
+            padding: 2.5rem 2rem;
+            border-radius: 24px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.05);
+            width: 100%;
+            max-width: 420px;
+            position: relative;
+            z-index: 10;
+            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .container:hover {
+            transform: translateY(-5px);
+        }
+
+        .header-area {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        h2 { 
+            color: var(--primary); 
+            font-size: 26px;
+            font-weight: 600;
+            letter-spacing: -0.5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .subtitle {
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+
+        .input-group {
+            position: relative;
+            margin-bottom: 16px;
+        }
+
+        input {
+            width: 100%;
+            padding: 14px 16px;
+            border: 2px solid #e1e1e6;
+            border-radius: 14px;
+            font-size: 14px;
+            font-family: inherit;
+            color: var(--text-dark);
+            background-color: #f8f9fa;
+            transition: all 0.3s ease;
+        }
+
+        input:focus {
+            border-color: var(--primary);
+            background-color: #fff;
+            box-shadow: 0 0 0 4px rgba(123, 44, 191, 0.15);
+            outline: none;
+        }
+
+        button {
+            width: 100%;
+            padding: 16px;
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 14px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(123, 44, 191, 0.3);
+            transition: all 0.2s ease;
+            margin-top: 8px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        button:hover {
+            background-color: var(--primary-hover);
+            box-shadow: 0 6px 20px rgba(123, 44, 191, 0.4);
+        }
+
+        /* Premium Touch Animation Feedback */
+        button:active {
+            transform: scale(0.96);
+            box-shadow: 0 2px 8px rgba(123, 44, 191, 0.2);
+        }
+
+        #statusMessage {
+            text-align: center;
+            margin-top: 18px;
+            font-size: 13px;
+            font-weight: 500;
+            min-height: 20px;
+        }
+
+        /* Developer Branding Footer */
+        .developer-credit {
+            margin-top: 25px;
+            font-size: 11px;
+            color: rgba(255, 255, 255, 0.35);
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            font-weight: 500;
+            z-index: 10;
+            transition: color 0.3s ease;
+            cursor: default;
+        }
+
+        .developer-credit span {
+            color: var(--primary);
+            font-weight: 600;
+        }
+
+        .developer-credit:hover {
+            color: rgba(255, 255, 255, 0.7);
+        }
     </style>
-  </head>
-  <body>
-    <div class="portal-card">
-      <div class="brand-header">
-        <h1>G H Raisoni University</h1>
-        <p>Department of Computer Applications — BCA Sem-III</p>
-      </div>
+</head>
+<body>
 
-      <span class="badge">⏱️ 10-Min Live SMS Alerts Enabled</span>
-
-      <form id="alertSystemForm">
-        <div class="form-group">
-          <!-- बदल १: लेबल आणि इनपुट बॉक्स १० अंकी नंबरसाठी अपडेट केला -->
-          <label for="phone">SMS Target Number (10-Digit Mobile Number)</label>
-          <input
-            type="tel"
-            id="phone"
-            placeholder="Enter your number (e.g., 9876543210)"
-            maxlength="10"
-            pattern="[0-9]{10}"
-            required
-          />
-        </div>
-        <button type="submit" class="btn-action">Activate SMS Subscriptions</button>
-      </form>
-
-      <div id="statusBanner" class="status-banner"></div>
+<div class="container">
+    <div class="header-area">
+        <h2>BCA Portal 🎓</h2>
+        <div class="subtitle">Secure Lecture Alert Registration</div>
     </div>
+    
+    <div class="input-group">
+        <input type="text" id="studentName" placeholder="Full Name" required>
+    </div>
+    <div class="input-group">
+        <input type="text" id="enrollNo" placeholder="Enrollment Number (GHRUA...)" required>
+    </div>
+    <div class="input-group">
+        <input type="text" id="semester" placeholder="Semester (e.g., 5)" required>
+    </div>
+    <div class="input-group">
+        <input type="tel" id="phoneNumber" placeholder="10-Digit Phone Number" required>
+    </div>
+    
+    <button onclick="registerStudent()">Register Now</button>
+    <p id="statusMessage"></p>
+</div>
 
-    <script>
-      document
-        .getElementById("alertSystemForm")
-        .addEventListener("submit", async function (event) {
-          event.preventDefault();
-          const phone = document.getElementById("phone").value.trim();
-          const banner = document.getElementById("statusBanner");
+<!-- Developer Credit Line -->
+<div class="developer-credit">Developed by <span>Yash Kshirasagar</span></div>
 
-          banner.style.display = "none";
+<script>
+    async function registerStudent() {
+        const statusMsg = document.getElementById('statusMessage');
+        
+        const data = {
+            name: document.getElementById('studentName').value.trim(),
+            enroll_no: document.getElementById('enrollNo').value.trim(),
+            sem: document.getElementById('semester').value.trim(),
+            phone: document.getElementById('phoneNumber').value.trim()
+        };
 
-          // बदल २: कंट्री कोडची जुनी व्हॅलिडेशन काढून फक्त १० अंक तपासले
-          if (phone.length !== 10 || isNaN(phone)) {
-            banner.className = "status-banner error";
-            banner.innerHTML = "<strong>Invalid Format</strong><br>Please enter a valid 10-digit mobile number.";
-            banner.style.display = "block";
+        if (!data.name || !data.enroll_no || !data.sem || !data.phone) {
+            statusMsg.style.color = "#d90429";
+            statusMsg.innerText = "❌ Please fill all fields!";
             return;
-          }
+        }
 
-          try {
-            const endpointResponse = await fetch("/api/subscribe", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ phone }),
+        statusMsg.style.color = "#3a86ff";
+        statusMsg.innerText = "Processing registration...";
+
+        try {
+            const response = await fetch('/api/subscribe', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
             });
 
-            if (endpointResponse.ok) {
-              banner.className = "status-banner success";
-              banner.innerHTML =
-                "<strong>Setup Verified!</strong><br>Automated alerts containing subject name, teacher name, and lecture time will hit your mobile inbox via SMS 10 minutes before class starts.";
-              document.getElementById("phone").value = ""; // Clear input on success
+            if (response.ok) {
+                statusMsg.style.color = "#38b000";
+                statusMsg.innerText = "🎉 Registration Successful! SMS Sent.";
+                
+                // Clear inputs
+                document.getElementById('studentName').value = "";
+                document.getElementById('enrollNo').value = "";
+                document.getElementById('semester').value = "";
+                document.getElementById('phoneNumber').value = "";
+            } else if (response.status === 403) {
+                statusMsg.style.color = "#d90429";
+                statusMsg.innerText = "⚠️ Access Denied: Enrollment not in Whitelist!";
             } else {
-              throw new Error();
+                statusMsg.style.color = "#d90429";
+                statusMsg.innerText = "❌ Registration failed. Try again.";
             }
-          } catch (error) {
-            banner.className = "status-banner error";
-            banner.innerHTML =
-              "<strong>Connection Refused</strong><br>Could not subscribe. Make sure your server engine terminal is active.";
-          }
+        } catch (e) {
+            statusMsg.style.color = "#d90429";
+            statusMsg.innerText = "❌ Connection error to server!";
+        }
+    }
+</script>
 
-          banner.style.display = "block";
-        });
-    </script>
-  </body>
+</body>
 </html>
