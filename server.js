@@ -8,18 +8,60 @@ const app = express();
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
 
-// 🛢️ MySQL डेटाबेस कनेक्शन
-const db = mysql.createPool({
+// 🛢️ MySQL डेटाबेस कनेक्शन (Pool ऐवजी थेट कनेक्शन विथ ऑटो-रिकनेक्ट)
+const dbConfig = {
   host: "mysql-3a8a9382-yash721950-fa6f.b.aivencloud.com",      
   port: 27814,
   user: "avnadmin",           
   password: process.env.DB_PASSWORD, 
   database: "defaultdb",
-  waitForConnections: true,
-  connectionLimit: 10,
-  queueLimit: 0,
   ssl: { rejectUnauthorized: false }
-});
+};
+
+let db;
+function handleDisconnect() {
+  db = mysql.createConnection(dbConfig);
+  db.connect((err) => {
+    if (err) {
+      console.error("❌ MySQL डेटाबेस कनेक्शन फेल, पुन्हा प्रयत्न करत आहे...:", err.message);
+      setTimeout(handleDisconnect, 2000);
+    } else {
+      console.log("✅ MySQL डेटाबेस यशस्वीरित्या कनेक्ट झाला! 🛢️");
+      setupTables();
+    }
+  });
+  db.on("error", (err) => {
+    if (err.code === "PROTOCOL_CONNECTION_LOST") {
+      handleDisconnect();
+    } else {
+      throw err;
+    }
+  });
+}
+handleDisconnect();
+
+function setupTables() {
+  const createSessionTable = `
+    CREATE TABLE IF NOT EXISTS wa_sessions (
+      session_id VARCHAR(255) PRIMARY KEY,
+      data LONGTEXT NOT NULL,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    );
+  `;
+  const createStudentsTable = `
+    CREATE TABLE IF NOT EXISTS bca_students (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      phone VARCHAR(15) UNIQUE NOT NULL,
+      name VARCHAR(100) NOT NULL,
+      enroll_no VARCHAR(50) UNIQUE NOT NULL,
+      sem VARCHAR(10) NOT NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+  `;
+  db.query(createSessionTable, () => {
+    db.query(createStudentsTable, () => {});
+  });
+}
 
 // 🛠️ कस्टम डेटाबेस सेशन स्टोअर
 const MySQLStore = {
@@ -83,83 +125,66 @@ const client = new Client({
   }
 });
 
-// 📲 सुरक्षित Pairing Code जनरेशन (१० सेकंदाच्या डिले आणि ट्राय-कॅचसह)
+// 📲 सुरक्षित Pairing Code जनरेशन (स्मार्ट चेकसह)
 let pairingCodeRequested = false;
 client.on("qr", async (qr) => {
-  if (pairingCodeRequested) return;
+  if (isBotReady || pairingCodeRequested) return;
   pairingCodeRequested = true;
 
   console.log("---------------------------------------------------------");
-  console.log("⏳ सर्व्हर स्थिर होत आहे, १० सेकंद थांबा... पेअरिंग कोड जनरेट होत आहे...");
+  console.log("⏳ सर्व्हर स्थिर होत आहे, १० सेकंद थांबा...");
   console.log("---------------------------------------------------------");
   
-  // व्हॉट्सॲपला ब्लॉक करण्यापासून रोखण्यासाठी आणि लायब्ररी स्थिर करण्यासाठी १० सेकंदाचा डिले
   await new Promise(resolve => setTimeout(resolve, 10000));
+
+  // जर या १० सेकंदात बॉट रेडी झाला असेल तर कोड मागू नका
+  if (isBotReady) return;
 
   try {
     const myPhoneNumber = "917219502467"; 
+    console.log("📞 पेअरिंग कोडची रिक्वेस्ट पाठवत आहे...");
     const pairingCode = await client.requestPairingCode(myPhoneNumber);
     console.log("\n=================================================");
     console.log("🔥 तुझा WHATSAPP PAIRING CODE: ", pairingCode);
     console.log("=================================================\n");
   } catch (err) {
-    console.error("❌ Pairing Code Error (Retrying):", err.message);
-    // एरर आल्यास ५ सेकंदाने पुन्हा प्रयत्न करण्यासाठी फ्लॅग रिसेट केला
-    setTimeout(() => { pairingCodeRequested = false; }, 5000);
+    console.error("❌ Pairing Code Error:", err.message);
+    pairingCodeRequested = false; 
   }
 });
 
 client.on("ready", () => {
   console.log("✅ WhatsApp Bot यशस्वीरित्या कनेक्ट झाला आहे आणि रेडी आहे! 🚀");
   isBotReady = true;
+  pairingCodeRequested = false;
 });
 
 client.on('remote_auth_success', () => {
   console.log('💾 लॉगिन सेशन डेटाबेसमध्ये सुरक्षित सेव्ह झालं!');
 });
 
+client.on('auth_failure', (msg) => {
+  console.error('❌ Authentication फेल झालं:', msg);
+  isBotReady = false;
+  pairingCodeRequested = false;
+});
+
 client.on('disconnected', (reason) => {
   console.log('❌ WhatsApp डिसकनेक्ट झालं! पुन्हा कनेक्ट करत आहे...', reason);
   isBotReady = false;
   pairingCodeRequested = false;
-  client.initialize();
+  setTimeout(() => { client.initialize(); }, 5000);
+});
+
+// प्रोसेस क्रॅश होण्यापासून वाचवण्यासाठी ग्लोबल एरर हँडलर
+process.on('uncaughtException', (err) => {
+  console.error('⚠️ Uncaught Exception रोखली:', err.message);
+});
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('⚠️ Unhandled Rejection रोखली:', reason);
 });
 
 client.initialize();
-
-// डेटाबेस टेबल्स सेटअप
-db.getConnection((err, connection) => {
-  if (err) {
-    console.error("❌ MySQL डेटाबेस कनेक्शन फेल:", err.message);
-  } else {
-    console.log("✅ MySQL डेटाबेस यशस्वीरित्या कनेक्ट झाला! 🛢️");
-    
-    const createSessionTable = `
-      CREATE TABLE IF NOT EXISTS wa_sessions (
-        session_id VARCHAR(255) PRIMARY KEY,
-        data LONGTEXT NOT NULL,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-      );
-    `;
-    
-    const createStudentsTable = `
-      CREATE TABLE IF NOT EXISTS bca_students (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        phone VARCHAR(15) UNIQUE NOT NULL,
-        name VARCHAR(100) NOT NULL,
-        enroll_no VARCHAR(50) UNIQUE NOT NULL,
-        sem VARCHAR(10) NOT NULL,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      );
-    `;
-
-    connection.query(createSessionTable, () => {
-      connection.query(createStudentsTable, () => {
-        connection.release();
-      });
-    });
-  }
-});
 
 let sentAlertsLog = {}; 
 const timetable = {
@@ -201,8 +226,8 @@ const timetable = {
     { start: "12:45", subject: "Lab on Ecommerce", teacher: "Dr. Shailesh R. Thakare" },
     { start: "13:45", subject: "Advance Excel", teacher: "Prof. Pranav A. Dhabarde" },
     { start: "15:00", subject: "Physical Education", teacher: "Dr. Amar More" },
-    { start: "16:00", text: "Library", teacher: "Library Staff" }
-  ]
+    { start: "16:00", subject: "Physical Education", teacher: "Dr. Amar More" },
+  ],
 };
 
 const allowedEnrollments = [];
@@ -290,7 +315,7 @@ cron.schedule("* * * * *", () => {
       db.query("SELECT phone FROM bca_students", (err, results) => {
         if (err || results.length === 0) return;
         results.forEach(row => {
-          const alertMessage = `📢 *BCA Class Alert* 🎓\n\n📚 *Subject:* ${upcomingLecture.subject}\n👨‍🏫 *Teacher:* ${upcomingLecture.teacher}\n⏰ *Time:*${upcomingLecture.start}`;
+          const alertMessage = `📢 *BCA Class Alert* 🎓\n\n📚 *Subject:* ${upcomingLecture.subject}\n👨‍🏫 *Teacher:* ${upcomingLecture.teacher}\n⏰ *Time:* ${upcomingLecture.start}`;
           sendWhatsAppAlert(row.phone, alertMessage);
         });
       });
