@@ -33,11 +33,14 @@ db.getConnection((err, connection) => {
   } else {
     console.log("✅ MySQL डेटाबेस यशस्वीरित्या कनेक्ट झाला! 🛢️");
     
-    // युझर्ससाठी टेबल नसेल तर ऑटोमॅटिक तयार होईल
+    // युझर्ससाठी टेबल नसेल तर ऑटोमॅटिक तयार होईल (सुरक्षेसाठी नाव, एन्ड्रॉलमेंट नंबर आणि सेमिस्टरचे कॉलम्स जोडले)
     const createTableQuery = `
       CREATE TABLE IF NOT EXISTS users (
         id INT AUTO_INCREMENT PRIMARY KEY,
         phone VARCHAR(15) UNIQUE NOT NULL,
+        name VARCHAR(100) NOT NULL,
+        enroll_no VARCHAR(50) UNIQUE NOT NULL,
+        sem VARCHAR(10) NOT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
     `;
@@ -94,37 +97,60 @@ const timetable = {
   ],
 };
 
-// 🛠️ नंबर MySQL डेटाबेसमध्ये सेव्ह करणारा Route (Registration) + 📩 वेलकम SMS लॉजिक (४०० एरर फिक्ससह)
+// 🛠️ GHRUA2501110001 ते GHRUA2501110080 पर्यंत ऑटोमॅटिक लिस्ट जनरेट केली (Whitelist)
+const allowedEnrollments = [];
+for (let i = 1; i <= 80; i++) {
+  const paddedNumber = String(i).padStart(4, '0');
+  allowedEnrollments.push(`GHRUA250111${paddedNumber}`);
+}
+
+// 🛠️ १००% सुरक्षित रजिस्ट्रेशन राऊट (नाव, सेमिस्टर आणि एन्ड्रॉलमेंट नंबर व्हेरिफिकेशनसह)
 app.post("/api/subscribe", (req, res) => {
-  let cleanPhone = req.body.phone.replace(/[^0-9]/g, "");
+  const { phone, name, enroll_no, sem } = req.body;
+
+  // १. सर्व फील्ड्स भरल्या आहेत की नाही तपासणे
+  if (!phone || !name || !enroll_no || !sem) {
+    return res.status(400).send("Please fill all fields.");
+  }
+
+  // २. सिक्युरिटीचेक: एन्ड्रॉलमेंट नंबर आपल्या लिस्टमध्ये (Whitelist) आहे का ते तपासणे
+  const studentEnroll = String(enroll_no).trim().toUpperCase(); 
+  if (!allowedEnrollments.includes(studentEnroll)) {
+    console.log(`⚠️ अनधिकृत प्रवेशाचा प्रयत्न! Enrollment: ${studentEnroll}`);
+    return res.status(403).send("Access Denied: Your Enrollment Number is not in our whitelist.");
+  }
+
+  // ३. फोन नंबर क्लीन करणे
+  let cleanPhone = phone.replace(/[^0-9]/g, "");
   if (cleanPhone.length === 12 && cleanPhone.startsWith("91")) cleanPhone = cleanPhone.substring(2);
 
   if (cleanPhone.length === 10) {
-    const sql = "INSERT IGNORE INTO users (phone) VALUES (?)";
-    db.query(sql, [cleanPhone], (err, result) => {
+    // ४. सर्व माहिती MySQL डेटाबेसमध्ये सेव्ह करणे
+    const sql = "INSERT IGNORE INTO users (phone, name, enroll_no, sem) VALUES (?, ?, ?, ?)";
+    db.query(sql, [cleanPhone, name, studentEnroll, sem], (err, result) => {
       if (err) {
         console.error("❌ डेटाबेसमध्ये नंबर सेव्ह करताना एरर:", err.message);
         return res.status(500).send("Database Error.");
       }
-      console.log(`🚀 Successfully registered student number in MySQL: ${cleanPhone}`);
       
-      // 💬 विद्यार्थ्याला पाठवायचा नवीन रजिस्ट्रेशनचा इंग्लिश मेसेज
-      const welcomeMessage = `BCA Alerts 🎓\n\nYour number has been successfully verified! You will receive lecture alerts 10 minutes before your scheduled class.`;
+      console.log(`🚀 Successfully verified & registered student: ${name} (${studentEnroll})`);
+      
+      // 💬 विद्यार्थ्याला पाठवायचा पर्सनलाइज्ड इंग्लिश वेलकम मेसेज
+      const welcomeMessage = `BCA Alerts 🎓\n\nHi ${name}, your number is verified! You will receive lecture alerts 10 minutes before your class.`;
 
-      // 🛠️ ४०० एरर फिक्स करण्यासाठी नंबर प्रॉपर फॉरमॅट केला
       const targetNumber = String(cleanPhone).trim();
 
       const params = new URLSearchParams();
       params.append("route", "q"); 
       params.append("message", welcomeMessage);
       params.append("language", "english");
-      params.append("numbers", targetNumber); // कन्फर्म शुद्ध १० अंकी नंबर
+      params.append("numbers", targetNumber);
 
       axios.post("https://www.fast2sms.com/dev/bulkV2", params, {
         headers: { "authorization": FAST2SMS_API_KEY }
       })
-      .then(() => console.log(`📩 Welcome SMS sent successfully to ${targetNumber}`))
-      .catch((smsErr) => console.error(`❌ Welcome SMS Error:`, smsErr.response ? JSON.stringify(smsErr.response.data) : smsErr.message));
+      .then(() => console.log(`📩 Welcome SMS sent successfully to ${name}`))
+      .catch((smsErr) => console.error(`❌ Welcome SMS Error:`, smsErr.message));
 
       res.sendStatus(200);
     });
@@ -189,7 +215,7 @@ cron.schedule("* * * * *", () => {
         sentAlertsLog[holidayKey] = true;
       }
     }
-    return; // सुट्टीच्या दिवशी पुढचा लेक्चर कोड धावणार नाही
+    return; 
   }
 
   // 📖 सोमवार ते शुक्रवारचे नेहमीचे लेक्चर्सचे लॉजिक
@@ -236,8 +262,6 @@ cron.schedule("* * * * *", () => {
           })
           .then(() => console.log(`📢 Fast2SMS: Alerts successfully sent to all registered students!`))
           .catch((err) => console.error(`❌ Fast2SMS API Error:`, err.message));
-        } else {
-          console.log("ℹ️ डेटाबेसमध्ये अजून एकही नंबर रजिस्टर्ड नाही.");
         }
       });
 
@@ -263,4 +287,4 @@ cron.schedule("* * * * *", () => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Website engine online at port ${PORT}`));
-        
+                 
