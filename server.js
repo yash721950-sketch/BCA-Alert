@@ -97,36 +97,31 @@ const timetable = {
   ],
 };
 
-// 🛠️ GHRUA2501110001 ते GHRUA2501110080 पर्यंत ऑटोमॅटिक लिस्ट जनरेट केली (पॅडिंग फिक्ससह)
+// 🛠️ GHRUA25011140001 ते GHRUA25011140080 (शेवटी परफेक्ट 4 आणि 4 अंकी नंबर)
 const allowedEnrollments = [];
 for (let i = 1; i <= 80; i++) {
-  // ३ शून्य लावून परफेक्ट ४ अंकी नंबर बनवला (उदा. 0001, 0002... 0080)
   const paddedNumber = String(i).padStart(4, '0');
-  allowedEnrollments.push(`GHRUA250111${paddedNumber}`);
+  allowedEnrollments.push(`GHRUA2501114${paddedNumber}`);
 }
 
-// 🛠️ १००% सुरक्षित रजिस्ट्रेशन राऊट (नाव, सेमिस्टर आणि एन्ड्रॉलमेंट नंबर व्हेरिफिकेशनसह)
+// 🛠️ १००% सुरक्षित रजिस्ट्रेशन राऊट
 app.post("/api/subscribe", (req, res) => {
   const { phone, name, enroll_no, sem } = req.body;
 
-  // १. सर्व फील्ड्स भरल्या आहेत की नाही तपासणे
   if (!phone || !name || !enroll_no || !sem) {
     return res.status(400).send("Please fill all fields.");
   }
 
-  // २. सिक्युरिटीचेक: एन्ड्रॉलमेंट नंबर आपल्या लिस्टमध्ये (Whitelist) आहे का ते तपासणे
   const studentEnroll = String(enroll_no).trim().toUpperCase(); 
   if (!allowedEnrollments.includes(studentEnroll)) {
     console.log(`⚠️ अनधिकृत प्रवेशाचा प्रयत्न! Enrollment: ${studentEnroll}`);
     return res.status(403).send("Access Denied: Your Enrollment Number is not in our whitelist.");
   }
 
-  // ३. फोन नंबर क्लीन करणे
   let cleanPhone = phone.replace(/[^0-9]/g, "");
   if (cleanPhone.length === 12 && cleanPhone.startsWith("91")) cleanPhone = cleanPhone.substring(2);
 
   if (cleanPhone.length === 10) {
-    // ४. सर्व माहिती MySQL डेटाबेसमध्ये सेव्ह करणे
     const sql = "INSERT IGNORE INTO users (phone, name, enroll_no, sem) VALUES (?, ?, ?, ?)";
     db.query(sql, [cleanPhone, name, studentEnroll, sem], (err, result) => {
       if (err) {
@@ -136,7 +131,6 @@ app.post("/api/subscribe", (req, res) => {
       
       console.log(`🚀 Successfully verified & registered student: ${name} (${studentEnroll})`);
       
-      // 💬 विद्यार्थ्याला पाठवायचा पर्सनलाइज्ड इंग्लिश वेलकम मेसेज
       const welcomeMessage = `BCA Alerts 🎓\n\nHi ${name}, your number is verified! You will receive lecture alerts 10 minutes before your class.`;
 
       const targetNumber = String(cleanPhone).trim();
@@ -178,7 +172,7 @@ app.get("/api/test-sms", (req, res) => {
   .catch((err) => res.status(500).send("Fast2SMS Error: " + (err.response ? JSON.stringify(err.response.data) : err.message)));
 });
 
-// 🚀 ३. Automation Cron (दर मिनिटाला धावतो)
+// 🚀 ३. Automation Cron
 cron.schedule("* * * * *", () => {
   const nowInIndia = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
   const days = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
@@ -188,7 +182,6 @@ cron.schedule("* * * * *", () => {
   const currentMinutes = String(nowInIndia.getMinutes()).padStart(2, '0');
   const currentTimeStr = `${currentHours}:${currentMinutes}`;
 
-  // 🗓️ शनिवार (SAT) आणि रविवार (SUN) साठी स्पेशल ११:१० चा सुट्टीचा मेसेज
   if (currentDay === "SAT" || currentDay === "SUN") {
     if (currentTimeStr === "11:10") {
       const holidayKey = `${currentDay}-holiday-1110`;
@@ -219,7 +212,6 @@ cron.schedule("* * * * *", () => {
     return; 
   }
 
-  // 📖 सोमवार ते शुक्रवारचे नेहमीचे लेक्चर्सचे लॉजिक
   const currentSchedule = timetable[currentDay] || [];
   
   const upcomingLecture = currentSchedule.find((l) => {
@@ -288,4 +280,3 @@ cron.schedule("* * * * *", () => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Website engine online at port ${PORT}`));
-    
