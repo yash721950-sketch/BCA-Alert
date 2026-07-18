@@ -101,8 +101,10 @@ const MySQLStore = {
 };
 
 let isBotReady = false;
+let currentPairingCode = null;
+let currentQrUrl = null;
 
-// 🟢 WhatsApp Client Setup
+// 🟢 WhatsApp Client Setup (Railway फ्रेंडली विदाऊट हार्डकोडेड क्रोम पाथ)
 const client = new Client({
   authStrategy: new RemoteAuth({
     clientId: "bca_bot_session",
@@ -115,7 +117,6 @@ const client = new Client({
   },
   puppeteer: { 
     headless: true,
-    executablePath: '/usr/bin/google-chrome-stable', 
     args: [
       '--no-sandbox', 
       '--disable-setuid-sandbox', 
@@ -125,9 +126,11 @@ const client = new Client({
   }
 });
 
-// 📲 सुरक्षित Pairing Code जनरेशन (स्मार्ट चेकसह)
+// 📲 सुरक्षित Pairing Code जनरेशन
 let pairingCodeRequested = false;
 client.on("qr", async (qr) => {
+  currentQrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(qr)}`;
+  
   if (isBotReady || pairingCodeRequested) return;
   pairingCodeRequested = true;
 
@@ -137,13 +140,13 @@ client.on("qr", async (qr) => {
   
   await new Promise(resolve => setTimeout(resolve, 10000));
 
-  // जर या १० सेकंदात बॉट रेडी झाला असेल तर कोड मागू नका
   if (isBotReady) return;
 
   try {
     const myPhoneNumber = "917219502467"; 
     console.log("📞 पेअरिंग कोडची रिक्वेस्ट पाठवत आहे...");
     const pairingCode = await client.requestPairingCode(myPhoneNumber);
+    currentPairingCode = pairingCode;
     console.log("\n=================================================");
     console.log("🔥 तुझा WHATSAPP PAIRING CODE: ", pairingCode);
     console.log("=================================================\n");
@@ -153,10 +156,34 @@ client.on("qr", async (qr) => {
   }
 });
 
+// 🌐 बॅकअप वेब पेज (पेअरिंग कोड आणि QR कोड दोन्ही पाहण्यासाठी)
+app.get("/qr", (req, res) => {
+  if (isBotReady) {
+    res.send(`
+      <div style="text-align: center; margin-top: 50px; font-family: Arial, sans-serif;">
+        <h2 style="color: green;">✅ WhatsApp Bot यशस्वीरित्या कनेक्टेड आहे!</h2>
+        <p style="font-size: 18px;">आता कोड टाकण्याची गरज नाही, बॉट बॅकग्राउंडला सुसाट चालू आहे भावा! 😎</p>
+      </div>
+    `);
+  } else {
+    res.send(`
+      <div style="text-align: center; margin-top: 50px; font-family: Arial, sans-serif;">
+        <h2>📸 BCA Alert Bot - Authentication</h2>
+        ${currentPairingCode ? `<h1 style="color: #075E54; background: #e1ffeb; display: inline-block; padding: 10px 20px; border-radius: 5px; font-size: 36px; letter-spacing: 5px;">${currentPairingCode}</h1><p>नंबर लिंक करताना वरील <b>पेअरिंग कोड</b> तुझ्या व्हॉट्सॲपमध्ये टाक भावा.</p>` : `<p>⏳ पेअरिंग कोड जनरेट होत आहे, काही सेकंद थांबा...</p>`}
+        <hr style="width: 50%; margin: 30px auto; border: 1px dashed #ccc;"/>
+        <h3>किंवा QR कोड स्कॅन कर:</h3>
+        ${currentQrUrl ? `<img src="${currentQrUrl}" style="border: 2px solid #333; padding: 10px; border-radius: 10px;"/>` : `<p>QR कोड लोड होत आहे...</p>`}
+      </div>
+    `);
+  }
+});
+
 client.on("ready", () => {
   console.log("✅ WhatsApp Bot यशस्वीरित्या कनेक्ट झाला आहे आणि रेडी आहे! 🚀");
   isBotReady = true;
   pairingCodeRequested = false;
+  currentPairingCode = null;
+  currentQrUrl = null;
 });
 
 client.on('remote_auth_success', () => {
