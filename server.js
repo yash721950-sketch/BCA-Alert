@@ -3,6 +3,7 @@ const cron = require("node-cron");
 const path = require("path");
 const mysql = require("mysql2"); 
 const { Client, LocalAuth } = require("whatsapp-web.js");
+const qrcode = require("qrcode-terminal"); // 👈 QR कोड टर्मिनलमध्ये दाखवण्यासाठी नवीन लायब्ररी
 
 const app = express();
 app.use(express.json());
@@ -17,7 +18,7 @@ const client = new Client({
   },
   puppeteer: { 
     headless: true,
-    executablePath: '/usr/bin/google-chrome-stable', // 👈 Docker इमेजमधला अचूक पाथ!
+    executablePath: '/usr/bin/google-chrome-stable', 
     args: [
       '--no-sandbox', 
       '--disable-setuid-sandbox', 
@@ -27,34 +28,32 @@ const client = new Client({
   }
 });
 
-// 📲 Pairing Code जनरेशन
-client.on("qr", async (qr) => {
+// 📸 QR Code जनरेशन (एरर येऊ नये म्हणून पेअरिंग कोड ऐवजी क्यूआर कोड)
+client.on("qr", (qr) => {
   console.log("---------------------------------------------------------");
-  console.log("⏳ QR कोड ऐवजी Pairing Code जनरेट होत आहे, २ सेकंद थांबा...");
+  console.log("📸 खालील QR कोड तुमच्या मोबाईलच्या WhatsApp ने स्कॅन करा:");
   console.log("---------------------------------------------------------");
-  
-  try {
-    const myPhoneNumber = "917219502467"; 
-    const pairingCode = await client.requestPairingCode(myPhoneNumber);
-    console.log("\n🔥 तुझा WHATSAPP PAIRING CODE आहे: ", pairingCode);
-    console.log("\n👉 मोबाईलच्या WhatsApp > Linked Devices > Link with phone number मध्ये जाऊन हा कोड टाक भावा!\n");
-  } catch (err) {
-    console.error("❌ Pairing Code Error:", err.message);
-  }
+  qrcode.generate(qr, { small: true }); // 👈 लॉग्समध्ये क्यूआर कोड प्रिंट होईल
 });
 
 client.on("ready", () => {
   console.log("✅ WhatsApp Bot यशस्वीरित्या कनेक्ट झाला आहे आणि रेडी आहे! 🚀");
 });
 
+// 🔄 ऑटो-रीकनेक्ट (इंटरनेट बंद पडल्यास आपोआप जोडण्यासाठी)
+client.on('disconnected', (reason) => {
+  console.log('❌ WhatsApp डिसकनेक्ट झालं! पुन्हा कनेक्ट करण्याचा प्रयत्न करत आहे...', reason);
+  client.initialize();
+});
+
 client.initialize();
 
-// 🛢️ MySQL डेटाबेस कनेक्शन (Aiven Cloud - Secure environment variables सह)
+// 🛢️ MySQL डेटाबेस कनेक्शन
 const db = mysql.createPool({
   host: "mysql-3a8a9382-yash721950-fa6f.b.aivencloud.com",      
   port: 27814,
   user: "avnadmin",           
-  password: process.env.DB_PASSWORD, // 👈 लपवलेला सुरक्षित पासवर्ड   
+  password: process.env.DB_PASSWORD, 
   database: "defaultdb",
   waitForConnections: true,
   connectionLimit: 10,
@@ -266,4 +265,3 @@ cron.schedule("* * * * *", () => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Website engine online at port ${PORT}`));
-      
