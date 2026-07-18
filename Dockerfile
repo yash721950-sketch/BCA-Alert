@@ -7,7 +7,7 @@ WORKDIR /app
 
 # लायब्ररीज इन्स्टॉल करणे
 COPY package*.json ./
-RUN npm ci
+RUN npm install
 
 # पूर्ण कोड कॉपी करणे
 COPY . .
