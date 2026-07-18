@@ -8,7 +8,7 @@ const app = express();
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
 
-// 🟢 WhatsApp Client Setup (Pairing Code साठी)
+// 🟢 WhatsApp Client Setup (Render साठी ऑप्टिमाइज्ड)
 const client = new Client({
   authStrategy: new LocalAuth(),
   webVersionCache: {
@@ -17,20 +17,19 @@ const client = new Client({
   },
   puppeteer: { 
     headless: true,
+    executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/chromium-browser', 
     args: ['--no-sandbox', '--disable-setuid-sandbox'] 
   }
 });
 
-// 📲 QR कोड ऐवजी स्क्रीनवर ८ अंकी Pairing Code मागवण्यासाठी बदल
+// 📲 Pairing Code जनरेशन
 client.on("qr", async (qr) => {
   console.log("---------------------------------------------------------");
   console.log("⏳ QR कोड ऐवजी Pairing Code जनरेट होत आहे, २ सेकंद थांबा...");
   console.log("---------------------------------------------------------");
   
   try {
-    // ✅ तुझा नंबर इथे आधीच परफेक्ट रिप्लेस केला आहे भावा!
     const myPhoneNumber = "917219502467"; 
-    
     const pairingCode = await client.requestPairingCode(myPhoneNumber);
     console.log("\n🔥 तुझा WHATSAPP PAIRING CODE आहे: ", pairingCode);
     console.log("\n👉 मोबाईलच्या WhatsApp > Linked Devices > Link with phone number मध्ये जाऊन हा कोड टाक भावा!\n");
@@ -45,12 +44,12 @@ client.on("ready", () => {
 
 client.initialize();
 
-// 🛢️ MySQL डेटाबेस कनेक्शन (Aiven Cloud)
+// 🛢️ MySQL डेटाबेस कनेक्शन (Aiven Cloud - Secure environment variables सह)
 const db = mysql.createPool({
   host: "mysql-3a8a9382-yash721950-fa6f.b.aivencloud.com",      
   port: 27814,
   user: "avnadmin",           
-  password: "AVNS_kpN5Gy9-j1TmgoZg7o7",   
+  password: process.env.DB_PASSWORD, // 👈 लपवलेला सुरक्षित पासवर्ड   
   database: "defaultdb",
   waitForConnections: true,
   connectionLimit: 10,
@@ -134,7 +133,6 @@ for (let i = 1; i <= 80; i++) {
   allowedEnrollments.push(`GHRUA2501114${paddedNumber}`);
 }
 
-// 📩 WhatsApp वर मेसेज पाठवण्यासाठी कॉमन फंक्शन (91 शिवाय)
 function sendWhatsAppAlert(phoneNumber, messageText) {
   const formattedNumber = `${phoneNumber}@c.us`; 
   client.sendMessage(formattedNumber, messageText)
@@ -142,7 +140,6 @@ function sendWhatsAppAlert(phoneNumber, messageText) {
     .catch((err) => console.error(`❌ WhatsApp Send Error for ${phoneNumber}:`, err.message));
 }
 
-// 🛠️ सुरक्षित रजिस्ट्रेशन राऊट (आता WhatsApp मेसेजसह)
 app.post("/api/subscribe", (req, res) => {
   const { phone, name, enroll_no, sem } = req.body;
 
@@ -173,9 +170,8 @@ app.post("/api/subscribe", (req, res) => {
       db.query(sql, [cleanPhone, name, studentEnroll, sem], (err, result) => {
         if (err) return res.status(500).send("Database Error.");
         
-        console.log(`🚀 Successfully verified & registered student: ${name} (${studentEnroll})`);
+        console.log(`🚀 Successfully registered student: ${name} (${studentEnroll})`);
         
-        // 💬 Welcome WhatsApp Message
         const welcomeMessage = `🎉 *Registration Successful!*\n\nHi ${name},\nYour registration on *BCA Alerts* portal is successful! 🎓`;
         sendWhatsAppAlert(cleanPhone, welcomeMessage);
 
@@ -187,7 +183,6 @@ app.post("/api/subscribe", (req, res) => {
   }
 });
 
-// 🚀 Automation Cron (व्हॉट्सॲपवर मेसेज पाठवेल)
 cron.schedule("* * * * *", () => {
   const nowInIndia = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
   const days = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
@@ -232,12 +227,8 @@ cron.schedule("* * * * *", () => {
     const alertKey = `${currentDay}-${upcomingLecture.start}`;
 
     if (!sentAlertsLog[alertKey]) {
-      
       db.query("SELECT phone FROM bca_students", (err, results) => {
-        if (err) {
-          console.error("❌ क्रॉन जॉबमध्ये नंबर काढताना एरर:", err.message);
-          return;
-        }
+        if (err) return;
 
         if (results.length > 0) {
           results.forEach(row => {
