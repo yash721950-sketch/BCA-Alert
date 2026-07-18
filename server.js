@@ -2,13 +2,13 @@ const express = require("express");
 const cron = require("node-cron");
 const path = require("path");
 const mysql = require("mysql2"); 
-const { Client, RemoteAuth } = require("whatsapp-web.js");
+const { Client, LocalAuth } = require("whatsapp-web.js"); // इथे LocalAuth केला
 
 const app = express();
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
 
-// 🛢️ MySQL डेटाबेस कनेक्शन (Pool ऐवजी थेट कनेक्शन विथ ऑटो-रिकनेक्ट)
+// 🛢️ MySQL डेटाबेस कनेक्शन
 const dbConfig = {
   host: "mysql-3a8a9382-yash721950-fa6f.b.aivencloud.com",      
   port: 27814,
@@ -41,13 +41,6 @@ function handleDisconnect() {
 handleDisconnect();
 
 function setupTables() {
-  const createSessionTable = `
-    CREATE TABLE IF NOT EXISTS wa_sessions (
-      session_id VARCHAR(255) PRIMARY KEY,
-      data LONGTEXT NOT NULL,
-      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-    );
-  `;
   const createStudentsTable = `
     CREATE TABLE IF NOT EXISTS bca_students (
       id INT AUTO_INCREMENT PRIMARY KEY,
@@ -58,57 +51,16 @@ function setupTables() {
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
   `;
-  db.query(createSessionTable, () => {
-    db.query(createStudentsTable, () => {});
-  });
+  db.query(createStudentsTable, () => {});
 }
-
-// 🛠️ कस्टम डेटाबेस सेशन स्टोअर
-const MySQLStore = {
-  sessionExists: async (options) => {
-    return new Promise((resolve) => {
-      db.query("SELECT 1 FROM wa_sessions WHERE session_id = ?", [options.session], (err, rows) => {
-        resolve(!err && rows && rows.length > 0);
-      });
-    });
-  },
-  save: async (options) => {
-    return new Promise((resolve) => {
-      const dataStr = JSON.stringify(options.data);
-      db.query(
-        "INSERT INTO wa_sessions (session_id, data) VALUES (?, ?) ON DUPLICATE KEY UPDATE data = ?",
-        [options.session, dataStr, dataStr],
-        () => resolve()
-      );
-    });
-  },
-  extract: async (options) => {
-    return new Promise((resolve) => {
-      db.query("SELECT data FROM wa_sessions WHERE session_id = ?", [options.session], (err, rows) => {
-        if (!err && rows && rows.length > 0) {
-          try { resolve(JSON.parse(rows[0].data)); } catch(e) { resolve(null); }
-        } else {
-          resolve(null);
-        }
-      });
-    });
-  },
-  delete: async (options) => {
-    return new Promise((resolve) => {
-      db.query("DELETE FROM wa_sessions WHERE session_id = ?", [options.session], () => resolve());
-    });
-  }
-};
 
 let isBotReady = false;
 let currentQrUrl = null;
 
-// 🟢 WhatsApp Client Setup (Render फ्रेंडली विथ क्रोम पाथ)
+// 🟢 WhatsApp Client Setup (LocalAuth सह रेंडर फ्रेंडली)
 const client = new Client({
-  authStrategy: new RemoteAuth({
-    clientId: "bca_bot_session",
-    store: MySQLStore,
-    backupSyncIntervalMs: 60000
+  authStrategy: new LocalAuth({
+    dataPath: path.join(__dirname, ".wwebjs_auth") // रेंडरवर लोकल फोल्डरमध्ये सेशन सेव्ह होणार
   }),
   webVersionCache: {
     type: 'remote',
@@ -149,7 +101,7 @@ app.get("/qr", (req, res) => {
         <div style="margin: 20px auto; padding: 20px; border: 2px dashed #075E54; display: inline-block; background: #f9f9f9; border-radius: 10px;">
           <img src="${currentQrUrl}" alt="WhatsApp QR Code" style="width: 300px; height: 300px;" />
         </div>
-        <p style="color: #666;">💡 टीप: ही लिंक लॅपटॉपवर किंवा दुसऱ्या कोणाच्या फोनवर उघडून तू स्वतःच्या फोनने QR स्कॅन करू शकतोस!</p>
+        <p style="color: #666;">💡 टीप: ही लिंक दुसऱ्या फोनवर/लॅपटॉपवर उघडून स्वतःच्या फोनने QR स्कॅन कर.</p>
       </div>
     `);
   } else {
@@ -166,10 +118,6 @@ client.on("ready", () => {
   console.log("✅ WhatsApp Bot यशस्वीरित्या कनेक्ट झाला आहे आणि रेडी आहे! 🚀");
   isBotReady = true;
   currentQrUrl = null;
-});
-
-client.on('remote_auth_success', () => {
-  console.log('💾 लॉगिन सेशन डेटाबेसमध्ये सुरक्षित सेव्ह झालं!');
 });
 
 client.on('auth_failure', (msg) => {
