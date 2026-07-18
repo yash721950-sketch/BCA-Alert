@@ -33,9 +33,9 @@ db.getConnection((err, connection) => {
   } else {
     console.log("✅ MySQL डेटाबेस यशस्वीरित्या कनेक्ट झाला! 🛢️");
     
-    // युझर्ससाठी टेबल नसेल तर ऑटोमॅटिक तयार होईल (सुरक्षेसाठी नाव, एन्ड्रॉलमेंट नंबर आणि सेमिस्टरचे कॉलम्स जोडले)
+    // 🛠️ 'users' ऐवजी 'bca_students' नाव दिले जेणेकरून नवीन कॉलम्ससह फ्रेश टेबल बनेल!
     const createTableQuery = `
-      CREATE TABLE IF NOT EXISTS users (
+      CREATE TABLE IF NOT EXISTS bca_students (
         id INT AUTO_INCREMENT PRIMARY KEY,
         phone VARCHAR(15) UNIQUE NOT NULL,
         name VARCHAR(100) NOT NULL,
@@ -97,14 +97,14 @@ const timetable = {
   ],
 };
 
-// 🛠️ GHRUA25011140001 ते GHRUA25011140080 (शेवटी परफेक्ट 4 आणि 4 अंकी नंबर)
+// 🛠️ GHRUA25011140001 ते GHRUA25011140080 पर्यंत ऑटोमॅटिक लिस्ट (4 फिक्स ठेवून)
 const allowedEnrollments = [];
 for (let i = 1; i <= 80; i++) {
   const paddedNumber = String(i).padStart(4, '0');
   allowedEnrollments.push(`GHRUA2501114${paddedNumber}`);
 }
 
-// 🛠️ १००% सुरक्षित रजिस्ट्रेशन राऊट
+// 🛠️ सुरक्षित रजिस्ट्रेशन राऊट
 app.post("/api/subscribe", (req, res) => {
   const { phone, name, enroll_no, sem } = req.body;
 
@@ -122,7 +122,8 @@ app.post("/api/subscribe", (req, res) => {
   if (cleanPhone.length === 12 && cleanPhone.startsWith("91")) cleanPhone = cleanPhone.substring(2);
 
   if (cleanPhone.length === 10) {
-    const sql = "INSERT IGNORE INTO users (phone, name, enroll_no, sem) VALUES (?, ?, ?, ?)";
+    // 🛠️ नवीन टेबल 'bca_students' मध्ये डेटा INSERT केला
+    const sql = "INSERT IGNORE INTO bca_students (phone, name, enroll_no, sem) VALUES (?, ?, ?, ?)";
     db.query(sql, [cleanPhone, name, studentEnroll, sem], (err, result) => {
       if (err) {
         console.error("❌ डेटाबेसमध्ये नंबर सेव्ह करताना एरर:", err.message);
@@ -132,7 +133,6 @@ app.post("/api/subscribe", (req, res) => {
       console.log(`🚀 Successfully verified & registered student: ${name} (${studentEnroll})`);
       
       const welcomeMessage = `BCA Alerts 🎓\n\nHi ${name}, your number is verified! You will receive lecture alerts 10 minutes before your class.`;
-
       const targetNumber = String(cleanPhone).trim();
 
       const params = new URLSearchParams();
@@ -172,7 +172,7 @@ app.get("/api/test-sms", (req, res) => {
   .catch((err) => res.status(500).send("Fast2SMS Error: " + (err.response ? JSON.stringify(err.response.data) : err.message)));
 });
 
-// 🚀 ३. Automation Cron
+// 🚀 ३. Automation Cron (दर मिनिटाला धावतो)
 cron.schedule("* * * * *", () => {
   const nowInIndia = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
   const days = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
@@ -187,7 +187,8 @@ cron.schedule("* * * * *", () => {
       const holidayKey = `${currentDay}-holiday-1110`;
       
       if (!sentAlertsLog[holidayKey]) {
-        db.query("SELECT phone FROM users", (err, results) => {
+        // 🛠️ bca_students मधून नंबर्स SELECT केले
+        db.query("SELECT phone FROM bca_students", (err, results) => {
           if (err || results.length === 0) return;
 
           const holidayMessage = `BCA Alerts 🎉\n\nIt's your holiday! Enjoy your day! 🥳🕺`;
@@ -228,7 +229,8 @@ cron.schedule("* * * * *", () => {
 
     if (!sentAlertsLog[alertKey]) {
       
-      db.query("SELECT phone FROM users", (err, results) => {
+      // 🛠️ bca_students मधून नंबर्स SELECT केले
+      db.query("SELECT phone FROM bca_students", (err, results) => {
         if (err) {
           console.error("❌ क्रॉन जॉबमध्ये नंबर काढताना एरर:", err.message);
           return;
