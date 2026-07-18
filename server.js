@@ -1,16 +1,51 @@
 const express = require("express");
 const cron = require("node-cron");
 const path = require("path");
-const axios = require("axios");
 const mysql = require("mysql2"); 
+const { Client, LocalAuth } = require("whatsapp-web.js");
 
 const app = express();
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
 
-// 🔑 तुझी Fast2SMS API Key
-const FAST2SMS_API_KEY = process.env.FAST2SMS_API_KEY || "3AlbuU40tVZodDdi0avMxTI3U05B8UfaMd6g1tOrbSFon0peTuKTN8v13G3I"; 
+// 🟢 WhatsApp Client Setup (Pairing Code साठी)
+const client = new Client({
+  authStrategy: new LocalAuth(),
+  webVersionCache: {
+    type: 'remote',
+    remotePath: 'https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/2.2412.54.html',
+  },
+  puppeteer: { 
+    headless: true,
+    args: ['--no-sandbox', '--disable-setuid-sandbox'] 
+  }
+});
 
+// 📲 QR कोड ऐवजी स्क्रीनवर ८ अंकी Pairing Code मागवण्यासाठी बदल
+client.on("qr", async (qr) => {
+  console.log("---------------------------------------------------------");
+  console.log("⏳ QR कोड ऐवजी Pairing Code जनरेट होत आहे, २ सेकंद थांबा...");
+  console.log("---------------------------------------------------------");
+  
+  try {
+    // ✅ तुझा नंबर इथे आधीच परफेक्ट रिप्लेस केला आहे भावा!
+    const myPhoneNumber = "917219502467"; 
+    
+    const pairingCode = await client.requestPairingCode(myPhoneNumber);
+    console.log("\n🔥 तुझा WHATSAPP PAIRING CODE आहे: ", pairingCode);
+    console.log("\n👉 मोबाईलच्या WhatsApp > Linked Devices > Link with phone number मध्ये जाऊन हा कोड टाक भावा!\n");
+  } catch (err) {
+    console.error("❌ Pairing Code Error:", err.message);
+  }
+});
+
+client.on("ready", () => {
+  console.log("✅ WhatsApp Bot यशस्वीरित्या कनेक्ट झाला आहे आणि रेडी आहे! 🚀");
+});
+
+client.initialize();
+
+// 🛢️ MySQL डेटाबेस कनेक्शन (Aiven Cloud)
 const db = mysql.createPool({
   host: "mysql-3a8a9382-yash721950-fa6f.b.aivencloud.com",      
   port: 27814,
@@ -89,7 +124,7 @@ const timetable = {
     { start: "12:45", subject: "Lab on Ecommerce", teacher: "Dr. Shailesh R. Thakare" },
     { start: "13:45", subject: "Advance Excel", teacher: "Prof. Pranav A. Dhabarde" },
     { start: "15:00", subject: "Physical Education", teacher: "Dr. Amar More" },
-    { start: "16:00", text: "Physical Education", teacher: "Dr. Amar More" },
+    { start: "16:00", subject: "Physical Education", teacher: "Dr. Amar More" },
   ],
 };
 
@@ -99,7 +134,15 @@ for (let i = 1; i <= 80; i++) {
   allowedEnrollments.push(`GHRUA2501114${paddedNumber}`);
 }
 
-// 🛠️ सुरक्षित रजिस्ट्रेशन राऊट (Fast2SMS JSON API आणि v3 रूटसह)
+// 📩 WhatsApp वर मेसेज पाठवण्यासाठी कॉमन फंक्शन (91 शिवाय)
+function sendWhatsAppAlert(phoneNumber, messageText) {
+  const formattedNumber = `${phoneNumber}@c.us`; 
+  client.sendMessage(formattedNumber, messageText)
+    .then(() => console.log(`📩 WhatsApp मेसेज ${phoneNumber} ला पाठवला!`))
+    .catch((err) => console.error(`❌ WhatsApp Send Error for ${phoneNumber}:`, err.message));
+}
+
+// 🛠️ सुरक्षित रजिस्ट्रेशन राऊट (आता WhatsApp मेसेजसह)
 app.post("/api/subscribe", (req, res) => {
   const { phone, name, enroll_no, sem } = req.body;
 
@@ -132,23 +175,9 @@ app.post("/api/subscribe", (req, res) => {
         
         console.log(`🚀 Successfully verified & registered student: ${name} (${studentEnroll})`);
         
-        // 🛠️ Fast2SMS ला सरळ JSON बॉडीमध्ये 'v3' रूटवर मेसेज पाठवणे (हा कधीच 400 एरर देत नाही)
-        const welcomeMessage = `Hi ${name}, your registration on BCA Alerts portal is successful!`;
-
-        axios.post("https://www.fast2sms.com/dev/bulkV2", {
-          route: "v3",
-          sender_id: "TXTIND",
-          message: welcomeMessage,
-          language: "english",
-          numbers: String(cleanPhone).trim()
-        }, {
-          headers: { 
-            "authorization": FAST2SMS_API_KEY,
-            "Content-Type": "application/json"
-          }
-        })
-        .then(() => console.log(`📩 Welcome SMS sent successfully to ${name}`))
-        .catch((smsErr) => console.error(`❌ Welcome SMS Error:`, smsErr.response ? JSON.stringify(smsErr.response.data) : smsErr.message));
+        // 💬 Welcome WhatsApp Message
+        const welcomeMessage = `🎉 *Registration Successful!*\n\nHi ${name},\nYour registration on *BCA Alerts* portal is successful! 🎓`;
+        sendWhatsAppAlert(cleanPhone, welcomeMessage);
 
         res.sendStatus(200);
       });
@@ -158,28 +187,7 @@ app.post("/api/subscribe", (req, res) => {
   }
 });
 
-// 🧪 डेमो टेस्ट राऊट (v3 फॉरमॅटसह)
-app.get("/api/test-sms", (req, res) => {
-  const testNumber = "7219502467"; 
-  const demoMessage = "BCA Alert Portal Test Message Success.";
-
-  axios.post("https://www.fast2sms.com/dev/bulkV2", {
-    route: "v3",
-    sender_id: "TXTIND",
-    message: demoMessage,
-    language: "english",
-    numbers: testNumber
-  }, {
-    headers: { 
-      "authorization": FAST2SMS_API_KEY,
-      "Content-Type": "application/json"
-    }
-  })
-  .then(() => res.send("Fast2SMS Demo Sent Successfully!"))
-  .catch((err) => res.status(500).send("Fast2SMS Error: " + (err.response ? JSON.stringify(err.response.data) : err.message)));
-});
-
-// 🚀 Automation Cron
+// 🚀 Automation Cron (व्हॉट्सॲपवर मेसेज पाठवेल)
 cron.schedule("* * * * *", () => {
   const nowInIndia = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
   const days = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
@@ -197,23 +205,10 @@ cron.schedule("* * * * *", () => {
         db.query("SELECT phone FROM bca_students", (err, results) => {
           if (err || results.length === 0) return;
 
-          const holidayMessage = "BCA Alerts: It's your holiday! Enjoy your day!";
-          const allNumbers = results.map(row => row.phone).join(",");
-
-          axios.post("https://www.fast2sms.com/dev/bulkV2", {
-            route: "v3",
-            sender_id: "TXTIND",
-            message: holidayMessage,
-            language: "english",
-            numbers: allNumbers
-          }, {
-            headers: { 
-              "authorization": FAST2SMS_API_KEY,
-              "Content-Type": "application/json"
-            }
-          })
-          .then(() => console.log("📢 Holiday SMS sent successfully!"))
-          .catch((err) => console.error("❌ Holiday SMS Error:", err.message));
+          results.forEach(row => {
+            const holidayMessage = "😎 *BCA Alerts*:\n\nIt's your holiday! Enjoy your day! 🎉";
+            sendWhatsAppAlert(row.phone, holidayMessage);
+          });
         });
 
         sentAlertsLog[holidayKey] = true;
@@ -245,23 +240,11 @@ cron.schedule("* * * * *", () => {
         }
 
         if (results.length > 0) {
-          const alertMessage = `BCA Class Alert: ${upcomingLecture.subject} by ${upcomingLecture.teacher} at ${upcomingLecture.start}.`;
-          const allNumbers = results.map(row => row.phone).join(",");
-
-          axios.post("https://www.fast2sms.com/dev/bulkV2", {
-            route: "v3",
-            sender_id: "TXTIND",
-            message: alertMessage,
-            language: "english",
-            numbers: allNumbers
-          }, {
-            headers: { 
-              "authorization": FAST2SMS_API_KEY,
-              "Content-Type": "application/json"
-            }
-          })
-          .then(() => console.log("📢 Lecture Alerts sent successfully!"))
-          .catch((err) => console.error("❌ Fast2SMS API Error:", err.message));
+          results.forEach(row => {
+            const alertMessage = `📢 *BCA Class Alert* 🎓\n\n📚 *Subject:* ${upcomingLecture.subject}\n👨‍🏫 *Teacher:* ${upcomingLecture.teacher}\n⏰ *Time:* ${upcomingLecture.start}`;
+            sendWhatsAppAlert(row.phone, alertMessage);
+          });
+          console.log(`📢 Lecture Alerts sent via WhatsApp at ${currentTimeStr}`);
         }
       });
 
