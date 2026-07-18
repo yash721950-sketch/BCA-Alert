@@ -132,14 +132,48 @@ app.get("/api/test-sms", (req, res) => {
   .catch((err) => res.status(500).send("Fast2SMS Error: " + (err.response ? JSON.stringify(err.response.data) : err.message)));
 });
 
-// 🚀 ३. Automation Cron
+// 🚀 ३. Automation Cron (दर मिनिटाला धावतो)
 cron.schedule("* * * * *", () => {
   const nowInIndia = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
   const days = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
   const currentDay = days[nowInIndia.getDay()];
 
-  if (currentDay === "SUN" || currentDay === "SAT") return;
+  const currentHours = String(nowInIndia.getHours()).padStart(2, '0');
+  const currentMinutes = String(nowInIndia.getMinutes()).padStart(2, '0');
+  const currentTimeStr = `${currentHours}:${currentMinutes}`;
 
+  // 🗓️ शनिवार (SAT) आणि रविवार (SUN) साठी स्पेशल ११:१० चा सुट्टीचा मेसेज
+  if (currentDay === "SAT" || currentDay === "SUN") {
+    if (currentTimeStr === "11:10") {
+      const holidayKey = `${currentDay}-holiday-1110`;
+      
+      if (!sentAlertsLog[holidayKey]) {
+        db.query("SELECT phone FROM users", (err, results) => {
+          if (err || results.length === 0) return;
+
+          const holidayMessage = `BCA Alerts 🎉\n\nIt's your holiday! Enjoy your day! 🥳🕺`;
+          const allNumbers = results.map(row => row.phone).join(",");
+
+          const params = new URLSearchParams();
+          params.append("route", "q");
+          params.append("message", holidayMessage);
+          params.append("language", "english");
+          params.append("numbers", allNumbers);
+
+          axios.post("https://www.fast2sms.com/dev/bulkV2", params, {
+            headers: { "authorization": FAST2SMS_API_KEY }
+          })
+          .then(() => console.log(`📢 Holiday SMS sent successfully to everyone!`))
+          .catch((err) => console.error(`❌ Holiday SMS Error:`, err.message));
+        });
+
+        sentAlertsLog[holidayKey] = true;
+      }
+    }
+    return; // सुट्टीच्या दिवशी पुढचा लेक्चर कोड धावणार नाही, इथूनच रिटर्न होईल
+  }
+
+  // 📖 सोमवार ते शुक्रवारचे नेहमीचे लेक्चर्सचे लॉजिक
   const currentSchedule = timetable[currentDay] || [];
   
   const upcomingLecture = currentSchedule.find((l) => {
@@ -193,6 +227,8 @@ cron.schedule("* * * * *", () => {
   }
 
   for (const key in sentAlertsLog) {
+    if (key.includes("holiday")) continue; // सुट्टीचा लॉग तसाच ठेवू जेणेकरून पुन्हा मेसेज जाणार नाही
+    
     const [day, startTime] = key.split("-");
     if (day === currentDay) {
       const [lHours, lMinutes] = startTime.split(":");
@@ -208,4 +244,4 @@ cron.schedule("* * * * *", () => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Website engine online at port ${PORT}`));
-               
+           
