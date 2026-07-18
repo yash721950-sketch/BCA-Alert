@@ -1,7 +1,7 @@
 {
   "name": "bca-alert-system",
   "version": "1.0.0",
-  "description": "BCA Lecture Alert System using Fast2SMS",
+  "description": "BCA Lecture Alert System using WhatsApp Web",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
@@ -11,6 +11,7 @@
     "express": "^4.19.2",
     "mysql2": "^3.11.0",
     "node-cron": "^3.0.3",
-    "whatsapp-web.js": "^1.26.0"
+    "whatsapp-web.js": "^1.26.0",
+    "qrcode-terminal": "^0.12.0"
   }
 }
