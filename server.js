@@ -8,7 +8,7 @@ const app = express();
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
 
-// 🔑 API Key फिक्स (चुकीची नावं सगळी काढून टाकली)
+// 🔑 तुझी Fast2SMS API Key
 const FAST2SMS_API_KEY = process.env.FAST2SMS_API_KEY || "3AlbuU40tVZodDdi0avMxTI3U05B8UfaMd6g1tOrbSFon0peTuKTN8v13G3I"; 
 
 const db = mysql.createPool({
@@ -99,6 +99,7 @@ for (let i = 1; i <= 80; i++) {
   allowedEnrollments.push(`GHRUA2501114${paddedNumber}`);
 }
 
+// 🛠️ सुरक्षित रजिस्ट्रेशन राऊट (Fast2SMS JSON API आणि v3 रूटसह)
 app.post("/api/subscribe", (req, res) => {
   const { phone, name, enroll_no, sem } = req.body;
 
@@ -131,20 +132,23 @@ app.post("/api/subscribe", (req, res) => {
         
         console.log(`🚀 Successfully verified & registered student: ${name} (${studentEnroll})`);
         
-        // 🛠️ मेसेज एकदम सोपा आणि अडथळा नसलेला केला जेणेकरून Fast2SMS रिजेक्ट करणार नाही
-        const welcomeMessage = `Welcome to BCA Alerts! Hi ${name}, your registration is successful. You will get class alerts on this number.`;
-        
-        const params = new URLSearchParams();
-        params.append("route", "q"); 
-        params.append("message", welcomeMessage);
-        params.append("language", "english");
-        params.append("numbers", String(cleanPhone).trim());
+        // 🛠️ Fast2SMS ला सरळ JSON बॉडीमध्ये 'v3' रूटवर मेसेज पाठवणे (हा कधीच 400 एरर देत नाही)
+        const welcomeMessage = `Hi ${name}, your registration on BCA Alerts portal is successful!`;
 
-        axios.post("https://www.fast2sms.com/dev/bulkV2", params, {
-          headers: { "authorization": FAST2SMS_API_KEY } // 🛠️ फिक्स API Key व्हेरीअबल
+        axios.post("https://www.fast2sms.com/dev/bulkV2", {
+          route: "v3",
+          sender_id: "TXTIND",
+          message: welcomeMessage,
+          language: "english",
+          numbers: String(cleanPhone).trim()
+        }, {
+          headers: { 
+            "authorization": FAST2SMS_API_KEY,
+            "Content-Type": "application/json"
+          }
         })
         .then(() => console.log(`📩 Welcome SMS sent successfully to ${name}`))
-        .catch((smsErr) => console.error(`❌ Welcome SMS Error:`, smsErr.message));
+        .catch((smsErr) => console.error(`❌ Welcome SMS Error:`, smsErr.response ? JSON.stringify(smsErr.response.data) : smsErr.message));
 
         res.sendStatus(200);
       });
@@ -154,23 +158,28 @@ app.post("/api/subscribe", (req, res) => {
   }
 });
 
+// 🧪 डेमो टेस्ट राऊट (v3 फॉरमॅटसह)
 app.get("/api/test-sms", (req, res) => {
   const testNumber = "7219502467"; 
-  const demoMessage = `BCA Lecture Portal is active now. Test message success.`;
+  const demoMessage = "BCA Alert Portal Test Message Success.";
 
-  const params = new URLSearchParams();
-  params.append("route", "q"); 
-  params.append("message", demoMessage);
-  params.append("language", "english");
-  params.append("numbers", testNumber);
-
-  axios.post("https://www.fast2sms.com/dev/bulkV2", params, {
-    headers: { "authorization": FAST2SMS_API_KEY }
+  axios.post("https://www.fast2sms.com/dev/bulkV2", {
+    route: "v3",
+    sender_id: "TXTIND",
+    message: demoMessage,
+    language: "english",
+    numbers: testNumber
+  }, {
+    headers: { 
+      "authorization": FAST2SMS_API_KEY,
+      "Content-Type": "application/json"
+    }
   })
   .then(() => res.send("Fast2SMS Demo Sent Successfully!"))
   .catch((err) => res.status(500).send("Fast2SMS Error: " + (err.response ? JSON.stringify(err.response.data) : err.message)));
 });
 
+// 🚀 Automation Cron
 cron.schedule("* * * * *", () => {
   const nowInIndia = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
   const days = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
@@ -188,17 +197,20 @@ cron.schedule("* * * * *", () => {
         db.query("SELECT phone FROM bca_students", (err, results) => {
           if (err || results.length === 0) return;
 
-          const holidayMessage = `BCA Alerts: It's your holiday! Enjoy your day!`;
+          const holidayMessage = "BCA Alerts: It's your holiday! Enjoy your day!";
           const allNumbers = results.map(row => row.phone).join(",");
 
-          const params = new URLSearchParams();
-          params.append("route", "q");
-          params.append("message", holidayMessage);
-          params.append("language", "english");
-          params.append("numbers", allNumbers);
-
-          axios.post("https://www.fast2sms.com/dev/bulkV2", params, {
-            headers: { "authorization": FAST2SMS_API_KEY }
+          axios.post("https://www.fast2sms.com/dev/bulkV2", {
+            route: "v3",
+            sender_id: "TXTIND",
+            message: holidayMessage,
+            language: "english",
+            numbers: allNumbers
+          }, {
+            headers: { 
+              "authorization": FAST2SMS_API_KEY,
+              "Content-Type": "application/json"
+            }
           })
           .then(() => console.log("📢 Holiday SMS sent successfully!"))
           .catch((err) => console.error("❌ Holiday SMS Error:", err.message));
@@ -233,17 +245,20 @@ cron.schedule("* * * * *", () => {
         }
 
         if (results.length > 0) {
-          const alertMessage = `BCA Class Alert: ${upcomingLecture.subject} by ${upcomingLecture.teacher} starting at ${upcomingLecture.start}.`;
+          const alertMessage = `BCA Class Alert: ${upcomingLecture.subject} by ${upcomingLecture.teacher} at ${upcomingLecture.start}.`;
           const allNumbers = results.map(row => row.phone).join(",");
 
-          const params = new URLSearchParams();
-          params.append("route", "q");
-          params.append("message", alertMessage);
-          params.append("language", "english");
-          params.append("numbers", allNumbers);
-
-          axios.post("https://www.fast2sms.com/dev/bulkV2", params, {
-            headers: { "authorization": FAST2SMS_API_KEY }
+          axios.post("https://www.fast2sms.com/dev/bulkV2", {
+            route: "v3",
+            sender_id: "TXTIND",
+            message: alertMessage,
+            language: "english",
+            numbers: allNumbers
+          }, {
+            headers: { 
+              "authorization": FAST2SMS_API_KEY,
+              "Content-Type": "application/json"
+            }
           })
           .then(() => console.log("📢 Lecture Alerts sent successfully!"))
           .catch((err) => console.error("❌ Fast2SMS API Error:", err.message));
