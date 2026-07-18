@@ -8,7 +8,7 @@ const app = express();
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
 
-// 🟢 WhatsApp Client Setup (Render साठी ऑप्टिमाइज्ड)
+// 🟢 WhatsApp Client Setup (Docker साठी परफेक्टली ऑप्टिमाइज्ड)
 const client = new Client({
   authStrategy: new LocalAuth(),
   webVersionCache: {
@@ -17,8 +17,13 @@ const client = new Client({
   },
   puppeteer: { 
     headless: true,
-    executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/chromium-browser', 
-    args: ['--no-sandbox', '--disable-setuid-sandbox'] 
+    executablePath: '/usr/bin/google-chrome-stable', // 👈 Docker इमेजमधला अचूक पाथ!
+    args: [
+      '--no-sandbox', 
+      '--disable-setuid-sandbox', 
+      '--disable-dev-shm-usage',
+      '--disable-gpu'
+    ] 
   }
 });
 
@@ -261,3 +266,4 @@ cron.schedule("* * * * *", () => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Website engine online at port ${PORT}`));
+      
