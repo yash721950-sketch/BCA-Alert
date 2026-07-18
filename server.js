@@ -3,13 +3,12 @@ const cron = require("node-cron");
 const path = require("path");
 const mysql = require("mysql2"); 
 const { Client, LocalAuth } = require("whatsapp-web.js");
-const qrcode = require("qrcode-terminal"); // 👈 QR कोड टर्मिनलमध्ये दाखवण्यासाठी नवीन लायब्ररी
 
 const app = express();
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
 
-// 🟢 WhatsApp Client Setup (Docker साठी परफेक्टली ऑप्टिमाइज्ड)
+// 🟢 WhatsApp Client Setup
 const client = new Client({
   authStrategy: new LocalAuth(),
   webVersionCache: {
@@ -28,21 +27,37 @@ const client = new Client({
   }
 });
 
-// 📸 QR Code जनरेशन (एरर येऊ नये म्हणून पेअरिंग कोड ऐवजी क्यूआर कोड)
-client.on("qr", (qr) => {
+// 📲 फिक्स केलेला सुरक्षित Pairing Code जनरेशन
+let pairingCodeRequested = false;
+client.on("qr", async (qr) => {
+  if (pairingCodeRequested) return;
+  pairingCodeRequested = true;
+
   console.log("---------------------------------------------------------");
-  console.log("📸 खालील QR कोड तुमच्या मोबाईलच्या WhatsApp ने स्कॅन करा:");
+  console.log("⏳ QR कोड ऐवजी Pairing Code जनरेट होत आहे, ५ सेकंद थांबा...");
   console.log("---------------------------------------------------------");
-  qrcode.generate(qr, { small: true }); // 👈 लॉग्समध्ये क्यूआर कोड प्रिंट होईल
+  
+  // व्हॉट्सॲप सर्व्हरला ब्लॉक करण्यापासून रोखण्यासाठी ५ सेकंदाचा डिले
+  await new Promise(resolve => setTimeout(resolve, 5000));
+
+  try {
+    const myPhoneNumber = "917219502467"; 
+    const pairingCode = await client.requestPairingCode(myPhoneNumber);
+    console.log("\n🔥 तुझा WHATSAPP PAIRING CODE आहे: ", pairingCode);
+    console.log("\n👉 मोबाईलच्या WhatsApp > Linked Devices > Link with phone number मध्ये जाऊन हा कोड टाक भावा!\n");
+  } catch (err) {
+    console.error("❌ Pairing Code Error:", err.message);
+    pairingCodeRequested = false; // एरर आल्यास पुन्हा प्रयत्न करण्यासाठी
+  }
 });
 
 client.on("ready", () => {
   console.log("✅ WhatsApp Bot यशस्वीरित्या कनेक्ट झाला आहे आणि रेडी आहे! 🚀");
 });
 
-// 🔄 ऑटो-रीकनेक्ट (इंटरनेट बंद पडल्यास आपोआप जोडण्यासाठी)
 client.on('disconnected', (reason) => {
   console.log('❌ WhatsApp डिसकनेक्ट झालं! पुन्हा कनेक्ट करण्याचा प्रयत्न करत आहे...', reason);
+  pairingCodeRequested = false;
   client.initialize();
 });
 
