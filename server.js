@@ -8,7 +8,7 @@ const app = express();
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
 
-// 🔑 तुझी Fast2SMS API Key
+// 🔑 तुझी Fast2SMS API Key (Render Environment Variable मधून ऑटोमॅटिक उचलली जाईल)
 const FAST2SMS_API_KEY = process.env.FAST2SMS_API_KEY || "3AlbuU40tVZodDdi0avMxTI3U05B8UfaMd6g1tOrbSFon0peTuKTN8v13G3I"; 
 
 // 🛢️ MySQL डेटाबेस कनेक्शन (Aiven चे लाईव्ह डिटेल्स डायरेक्ट ॲड केले आहेत)
@@ -94,7 +94,7 @@ const timetable = {
   ],
 };
 
-// 🛠️ नंबर MySQL डेटाबेसमध्ये सेव्ह करणारा Route (Registration)
+// 🛠️ नंबर MySQL डेटाबेसमध्ये सेव्ह करणारा Route (Registration) + 📩 वेलकम SMS लॉजिक
 app.post("/api/subscribe", (req, res) => {
   let cleanPhone = req.body.phone.replace(/[^0-9]/g, "");
   if (cleanPhone.length === 12 && cleanPhone.startsWith("91")) cleanPhone = cleanPhone.substring(2);
@@ -107,6 +107,22 @@ app.post("/api/subscribe", (req, res) => {
         return res.status(500).send("Database Error.");
       }
       console.log(`🚀 Successfully registered student number in MySQL: ${cleanPhone}`);
+      
+      // 💬 विद्यार्थ्याला पाठवायचा नवीन रजिस्ट्रेशनचा इंग्लिश मेसेज
+      const welcomeMessage = `BCA Alerts 🎓\n\nYour number has been successfully verified! You will receive lecture alerts 10 minutes before your scheduled class.`;
+
+      const params = new URLSearchParams();
+      params.append("route", "q"); 
+      params.append("message", welcomeMessage);
+      params.append("language", "english");
+      params.append("numbers", cleanPhone); // फक्त नवीन रजिस्टर झालेल्या नंबरला मेसेज जाईल
+
+      axios.post("https://www.fast2sms.com/dev/bulkV2", params, {
+        headers: { "authorization": FAST2SMS_API_KEY }
+      })
+      .then(() => console.log(`📩 Welcome SMS sent successfully to ${cleanPhone}`))
+      .catch((smsErr) => console.error(`❌ Welcome SMS Error:`, smsErr.message));
+
       res.sendStatus(200);
     });
   } else {
@@ -244,4 +260,4 @@ cron.schedule("* * * * *", () => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Website engine online at port ${PORT}`));
-           
+                         
