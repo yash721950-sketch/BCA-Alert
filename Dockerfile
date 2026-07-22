@@ -1,16 +1,18 @@
-FROM ghcr.io/puppeteer/puppeteer:22.6.0
-
-USER root
+# Node.js 20 ची व्हेरी लाईटवेट (Alpine) इमेज
+FROM node:20-alpine
 
 # प्रोजेक्ट डिरेक्टरी सेट करणे
 WORKDIR /app
 
-# लायब्ररीज इन्स्टॉल करणे
+# Dependencies कॉपी करून इन्स्टॉल करणे
 COPY package*.json ./
-RUN npm install
+RUN npm install --production
 
 # पूर्ण कोड कॉपी करणे
 COPY . .
+
+# Render साठी 3000 पोर्ट ओपन ठेवणे
+EXPOSE 3000
 
 # सर्व्हर चालू करणे
 CMD ["node", "server.js"]
