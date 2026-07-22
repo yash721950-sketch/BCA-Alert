@@ -1,10 +1,9 @@
-import makeWASocket, { useMultiFileAuthState, DisconnectReason } from "@whiskeysockets/baileys";
 import express from "express";
 import cron from "node-cron";
 import path from "path";
 import { fileURLToPath } from "url";
 import mysql from "mysql2";
-import QRCode from "qrcode";
+import fetch from "node-fetch";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -12,6 +11,10 @@ const __dirname = path.dirname(__filename);
 const app = express();
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
+
+// 🔑 माझे Meta Official API Credentials (Permanent Token)
+const PHONE_NUMBER_ID = "1225231590674644"; 
+const ACCESS_TOKEN = "EAAdxAucVo1cBSEw5nvlU4HpIPebuZAEgaztbEVbevsZBZClaptSoURpe1IIe2XTRPUVun4JBaYpTVAohXZBsi1fPy17NUqtXzyZBVI89t0hkcmZBVrssRCgTor5UTqlDAlp4huQpuMMsJ6KoE211KyVqsFxHBZC6KfrcXPZASJUdxybXX9UdsQrzRqElwG5PkQZDZD"; 
 
 // 🛢️ MySQL डेटाबेस कनेक्शन (Aiven Cloud)
 const dbConfig = {
@@ -59,88 +62,51 @@ function setupTables() {
   db.query(createStudentsTable, () => {});
 }
 
-let sock;
-let isBotReady = false;
-let currentQrDataUrl = null;
-
-// 🟢 Baileys WhatsApp Connection Function
-async function connectToWhatsApp() {
-  const { state, saveCreds } = await useMultiFileAuthState(path.join(__dirname, "auth_info_baileys"));
-
-  sock = makeWASocket({
-    auth: state,
-    printQRInTerminal: false
-  });
-
-  sock.ev.on("creds.update", saveCreds);
-
-  sock.ev.on("connection.update", async (update) => {
-    const { connection, lastDisconnect, qr } = update;
-
-    if (qr) {
-      console.log("📸 नवीन Baileys QR कोड जनरेट झाला आहे!");
-      currentQrDataUrl = await QRCode.toDataURL(qr);
-    }
-
-    if (connection === "close") {
-      const shouldReconnect = (lastDisconnect?.error)?.output?.statusCode !== DisconnectReason.loggedOut;
-      console.log("❌ व्हॉट्सॲप डिसकनेक्ट झाले. पुन्हा प्रयत्न करत आहे...", shouldReconnect);
-      isBotReady = false;
-      if (shouldReconnect) {
-        connectToWhatsApp();
-      }
-    } else if (connection === "open") {
-      console.log("✅ WhatsApp Bot (Baileys) यशस्वीरित्या कनेक्ट झाला आहे आणि रेडी आहे! 🚀");
-      isBotReady = true;
-      currentQrDataUrl = null;
-    }
-  });
-}
-
-connectToWhatsApp();
-
-// 🌐 QR कोड पाहण्यासाठी वेब पेज
-app.get("/qr", (req, res) => {
-  if (isBotReady) {
-    res.send(`
-      <div style="text-align: center; margin-top: 50px; font-family: Arial, sans-serif;">
-        <h2 style="color: green;">✅ WhatsApp Bot यशस्वीरित्या कनेक्टेड आहे! (Baileys Engine)</h2>
-        <p>बॉट बॅकग्राउंडला सुसाट चालू आहे भावा! 😎</p>
-      </div>
-    `);
-  } else if (currentQrDataUrl) {
-    res.send(`
-      <div style="text-align: center; margin-top: 50px; font-family: Arial, sans-serif;">
-        <h2>📸 BCA Alert Bot - Baileys QR Login</h2>
-        <p>तुझ्या मोबाईलच्या WhatsApp > Linked Devices मध्ये जाऊन हा QR कोड स्कॅन कर भावा:</p>
-        <div style="margin: 20px auto; padding: 20px; border: 2px dashed #075E54; display: inline-block; background: #f9f9f9; border-radius: 10px;">
-          <img src="${currentQrDataUrl}" alt="WhatsApp QR Code" style="width: 300px; height: 300px;" />
-        </div>
-      </div>
-    `);
-  } else {
-    res.send(`
-      <div style="text-align: center; margin-top: 50px; font-family: Arial, sans-serif;">
-        <h2>⏳ कृपया १० सेकंद थांबा...</h2>
-        <p>Baileys इंजिन सुरू होत आहे आणि QR कोड जनरेट करत आहे... पेज रिफ्रेश कर भावा.</p>
-      </div>
-    `);
-  }
+// 🌐 स्टेटस चेक करण्यासाठीचा रूट (आता QR कोडची गरज नाही)
+app.get("/status", (req, res) => {
+  res.send(`
+    <div style="text-align: center; margin-top: 50px; font-family: Arial, sans-serif;">
+      <h2 style="color: green;">✅ Meta Official WhatsApp API Active!</h2>
+      <p>बॉट कसल्याही स्कॅनिंगशिवाय १००% ऑटोमॅटिक बॅकग्राउंडला चालू आहे भावा! 😎</p>
+    </div>
+  `);
 });
 
-// 📩 मेसेज पाठवण्याचे फंक्शन
-async function sendWhatsAppAlert(phoneNumber, messageText) {
-  if (!isBotReady || !sock) return;
-  
-  let formattedNumber = phoneNumber.replace(/[^0-9]/g, "");
-  if (formattedNumber.length === 10) formattedNumber = "91" + formattedNumber;
-  const jid = `${formattedNumber}@s.whatsapp.net`;
+// 📩 Meta API द्वारे WhatsApp मेसेज पाठवण्याचे फंक्शन
+async function sendWhatsAppAlert(phoneNumber) {
+  let cleanPhone = phoneNumber.replace(/[^0-9]/g, "");
+  if (cleanPhone.length === 10) cleanPhone = "91" + cleanPhone;
+
+  const url = `https://graph.facebook.com/v18.0/${PHONE_NUMBER_ID}/messages`;
+
+  const payload = {
+    messaging_product: "whatsapp",
+    to: cleanPhone,
+    type: "template",
+    template: {
+      name: "hello_world", // Meta official template
+      language: { code: "en_US" }
+    }
+  };
 
   try {
-    await sock.sendMessage(jid, { text: messageText });
-    console.log(`📩 WhatsApp मेसेज ${phoneNumber} ला पाठवला!`);
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${ACCESS_TOKEN}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(payload)
+    });
+
+    const data = await response.json();
+    if (data.messages) {
+      console.log(`📩 Meta WhatsApp मेसेज ${cleanPhone} ला यशस्वीरित्या पाठवला!`);
+    } else {
+      console.error(`❌ Meta Send Error:`, data);
+    }
   } catch (err) {
-    console.error(`❌ Send Error:`, err.message);
+    console.error(`❌ Fetch Request Error:`, err.message);
   }
 }
 
@@ -171,8 +137,8 @@ app.post("/api/subscribe", (req, res) => {
       db.query(sql, [cleanPhone, name, studentEnroll, sem], (err) => {
         if (err) return res.status(500).send("Database Error.");
         
-        const welcomeMessage = `🎉 *Registration Successful!*\n\nHi ${name},\nYour registration on *BCA Alerts* portal is successful! 🎓`;
-        sendWhatsAppAlert(cleanPhone, welcomeMessage);
+        // रजिस्ट्रेशन झाल्यावर वेलकम मेसेज ट्रिगर
+        sendWhatsAppAlert(cleanPhone);
         res.sendStatus(200);
       });
     });
@@ -227,8 +193,6 @@ const timetable = {
 };
 
 cron.schedule("* * * * *", () => {
-  if (!isBotReady) return;
-
   const nowInIndia = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
   const days = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
   const currentDay = days[nowInIndia.getDay()];
@@ -243,7 +207,7 @@ cron.schedule("* * * * *", () => {
         db.query("SELECT phone FROM bca_students", (err, results) => {
           if (err || results.length === 0) return;
           results.forEach(row => {
-            sendWhatsAppAlert(row.phone, "😎 *BCA Alerts*:\n\nIt's your holiday! Enjoy your day! 🎉");
+            sendWhatsAppAlert(row.phone);
           });
         });
         sentAlertsLog[holidayKey] = true;
@@ -267,8 +231,7 @@ cron.schedule("* * * * *", () => {
       db.query("SELECT phone FROM bca_students", (err, results) => {
         if (err || results.length === 0) return;
         results.forEach(row => {
-          const alertMessage = `📢 *BCA Class Alert* 🎓\n\n📚 *Subject:* ${upcomingLecture.subject}\n👨‍🏫 *Teacher:* ${upcomingLecture.teacher}\n⏰ *Time:* ${upcomingLecture.start}`;
-          sendWhatsAppAlert(row.phone, alertMessage);
+          sendWhatsAppAlert(row.phone);
         });
       });
       sentAlertsLog[alertKey] = true;
@@ -280,4 +243,5 @@ cron.schedule("* * * * *", () => {
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Website engine online at port ${PORT}`));
+app.listen(PORT, () => console.log(`Meta Official Server online at port ${PORT}`));
+  
