@@ -12,7 +12,7 @@ const app = express();
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
 
-// 🔑 माझे Meta Official API Credentials (नवीन व परफेक्ट Permissions सह)
+// 🔑 माझे Meta Official API Credentials
 const PHONE_NUMBER_ID = "1225231590674644"; 
 const ACCESS_TOKEN = "EAAdxAucVo1cBSEiiv0niYKHgPapGNE4hswRJ5PWlzZBnnDpF0g4iy3CQ4lcR2SWbYebP0j0YZABq4ep1x3r5DCK4tvFTP5aUK8TiJaGYtXj93tGZBLQPB55Mlcue6W9XCNYw9ywmLqrYgabpjg6NdoFedNfV7IRgLUH2VH4AVk66focEtdPhm0CSeTvTwZDZD"; 
 
@@ -72,14 +72,13 @@ app.get("/status", (req, res) => {
   `);
 });
 
-// 📩 Meta API द्वारे WhatsApp मेसेज पाठवण्याचे सुधारित फंक्शन (lecture_alert template सह)
+// 📩 Meta API द्वारे WhatsApp मेसेज पाठवण्याचे फंक्शन
 async function sendWhatsAppAlert(phoneNumber, subject, teacher, time) {
   let cleanPhone = phoneNumber.replace(/[^0-9]/g, "");
   if (cleanPhone.length === 10) cleanPhone = "91" + cleanPhone;
 
   const url = `https://graph.facebook.com/v18.0/${PHONE_NUMBER_ID}/messages`;
 
-  // जर विषय दिला नसेल (उदा. रजिस्ट्रेशन वेळेस), तर बाय-डिफॉल्ट व्हॅल्यूज सेट होतील
   const subText = subject || "BCA Classes";
   const teachText = teacher || "Department Faculty";
   const timeText = time || "As per timetable";
@@ -89,15 +88,15 @@ async function sendWhatsAppAlert(phoneNumber, subject, teacher, time) {
     to: cleanPhone,
     type: "template",
     template: {
-      name: "lecture_alert", // आपण बनवलेला नवीन टेम्प्लेट
+      name: "lecture_alert",
       language: { code: "en_US" },
       components: [
         {
           type: "body",
           parameters: [
-            { type: "text", text: subText },   // {{1}} = Subject
-            { type: "text", text: teachText }, // {{2}} = Teacher
-            { type: "text", text: timeText }   // {{3}} = Time
+            { type: "text", text: subText },   // {{1}} = Title / Subject
+            { type: "text", text: teachText }, // {{2}} = Message Text / Teacher
+            { type: "text", text: timeText }   // {{3}} = Extra Info / Time
           ]
         }
       ]
@@ -124,6 +123,75 @@ async function sendWhatsAppAlert(phoneNumber, subject, teacher, time) {
     console.error(`❌ Fetch Request Error:`, err.message);
   }
 }
+
+// 💬 1. ADMIN ROUTE: तुला स्वतःला वाटेल तो Custom Message पाठवण्यासाठी
+app.get("/api/custom-message", (req, res) => {
+  const { title, text, info } = req.query;
+
+  if (!text) {
+    return res.status(400).send("❌ कृपया मेसेज लिहा. उदा: ?title=NOTICE&text=Tomorrow%20is%20holiday&info=College%20Closed");
+  }
+
+  const msgTitle = title ? `[${title}]` : "📢 BCA Notice";
+  const msgText = text;
+  const msgInfo = info || "BCA Department";
+
+  db.query("SELECT phone FROM bca_students", (err, results) => {
+    if (err || results.length === 0) return res.status(500).send("No students found.");
+    
+    results.forEach(row => {
+      sendWhatsAppAlert(row.phone, msgTitle, msgText, msgInfo);
+    });
+    
+    res.send(`✅ Custom message ("${msgText}") सर्व विद्यार्थ्यांना यशस्वीरित्या पाठवला!`);
+  });
+});
+
+// 🚫 2. ADMIN ROUTE: लेक्चर कॅन्सल करण्यासाठी
+app.get("/api/cancel-lecture", (req, res) => {
+  const { subject, reason } = req.query;
+  
+  if (!subject) {
+    return res.status(400).send("❌ कृपया विषय (subject) टाका. उदा: ?subject=Aptitude&reason=Teacher%20Absent");
+  }
+
+  const cancelSubject = `CANCELLED: ${subject}`;
+  const cancelTeacher = reason || "Faculty Unavailable";
+  const cancelTime = "Today's Slot";
+
+  db.query("SELECT phone FROM bca_students", (err, results) => {
+    if (err || results.length === 0) return res.status(500).send("No students found.");
+    
+    results.forEach(row => {
+      sendWhatsAppAlert(row.phone, cancelSubject, cancelTeacher, cancelTime);
+    });
+    
+    res.send(`✅ ${subject} च्या लेक्चर कॅन्सलेशनचा मेसेज सर्व विद्यार्थ्यांना यशस्वीरित्या पाठवला!`);
+  });
+});
+
+// 🔄 3. ADMIN ROUTE: दुसऱ्या शिक्षकांनी लेक्चर घेतल्यास (Substitute Lecture)
+app.get("/api/substitute-lecture", (req, res) => {
+  const { subject, teacher, time } = req.query;
+
+  if (!subject || !teacher) {
+    return res.status(400).send("❌ कृपया subject आणि teacher टाका. उदा: ?subject=Computer%20Graphics&teacher=Prof.%20Anuj&time=01:45%20PM");
+  }
+
+  const subSubject = `[Updated Class] ${subject}`;
+  const subTeacher = teacher;
+  const subTime = time || "Current Slot";
+
+  db.query("SELECT phone FROM bca_students", (err, results) => {
+    if (err || results.length === 0) return res.status(500).send("No students found.");
+    
+    results.forEach(row => {
+      sendWhatsAppAlert(row.phone, subSubject, subTeacher, subTime);
+    });
+    
+    res.send(`✅ ${subject} (by ${teacher}) च्या बदलाचा मेसेज सर्व विद्यार्थ्यांना पाठवला!`);
+  });
+});
 
 // 🌐 Student Registration API
 const allowedEnrollments = [];
@@ -152,7 +220,6 @@ app.post("/api/subscribe", (req, res) => {
       db.query(sql, [cleanPhone, name, studentEnroll, sem], (err) => {
         if (err) return res.status(500).send("Database Error.");
         
-        // रजिस्ट्रेशन झाल्यावर वेलकम अलर्ट ट्रिगर
         sendWhatsAppAlert(cleanPhone, "Registration Successful", "BCA Alert System", "Now Active");
         res.sendStatus(200);
       });
@@ -246,7 +313,6 @@ cron.schedule("* * * * *", () => {
       db.query("SELECT phone FROM bca_students", (err, results) => {
         if (err || results.length === 0) return;
         results.forEach(row => {
-          // 🚀 इथे विषय, शिक्षक आणि वेळ पास केली आहे
           sendWhatsAppAlert(row.phone, upcomingLecture.subject, upcomingLecture.teacher, upcomingLecture.start);
         });
       });
@@ -260,4 +326,3 @@ cron.schedule("* * * * *", () => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Meta Official Server online at port ${PORT}`));
-                                                        
