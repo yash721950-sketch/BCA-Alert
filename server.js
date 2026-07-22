@@ -14,7 +14,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, "public")));
 
 // 🔑 माझे Meta Official API Credentials
-const PHONE_NUMBER_ID = "127647885882280"; 
+const PHONE_NUMBER_ID = "1225234990674644"; 
 const ACCESS_TOKEN = "EAAdxAucVo1cBSOHcZAviCNfO5NV4EGJtmsAbx6c6rsDmRZCmy2JpHyUN7liicDB05VXQNrmmJdn7X3CDBNEKUSF3vFAVBY076SrLpNhtfQ9HgbOhfMbtz8vTQWZB3qRt6WPF5pMOZAZChevdzbEVGyU6kFTVWNUiS18bZBMkhHfC055wx8R2ywG2FOtYC7XgZDZD"; 
 
 // 🔐 Meta Webhook Verify Token
