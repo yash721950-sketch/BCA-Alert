@@ -10,6 +10,7 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, "public")));
 
 // 🔑 माझे Meta Official API Credentials
@@ -124,72 +125,71 @@ async function sendWhatsAppAlert(phoneNumber, subject, teacher, time) {
   }
 }
 
-// 💬 1. ADMIN ROUTE: तुला स्वतःला वाटेल तो Custom Message पाठवण्यासाठी
-app.get("/api/custom-message", (req, res) => {
-  const { title, text, info } = req.query;
+// 📲 ADMIN PANEL UI (टाइप करून पाठवण्यासाठीचा सुंदर फॉर्म)
+app.get("/admin", (req, res) => {
+  res.send(`
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>BCA Alert Admin Panel</title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0f2f5; padding: 20px; margin: 0; }
+        .card { max-width: 450px; margin: 20px auto; background: #fff; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        h2 { text-align: center; color: #075e54; margin-bottom: 20px; }
+        label { font-weight: bold; display: block; margin-top: 12px; color: #333; }
+        input, select { width: 100%; padding: 12px; margin-top: 6px; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box; font-size: 15px; }
+        button { width: 100%; background: #25d366; color: white; border: none; padding: 14px; font-size: 16px; font-weight: bold; border-radius: 8px; margin-top: 20px; cursor: pointer; }
+        button:hover { background: #128c7e; }
+      </style>
+    </head>
+    <body>
+      <div class="card">
+        <h2>📢 Send WhatsApp Alert</h2>
+        <form action="/admin/send" method="POST">
+          <label>Header / Title ({{1}}):</label>
+          <input type="text" name="title" placeholder="e.g. CANCELLED / NOTICE" required value="NOTICE">
 
-  if (!text) {
-    return res.status(400).send("❌ कृपया मेसेज लिहा. उदा: ?title=NOTICE&text=Tomorrow%20is%20holiday&info=College%20Closed");
-  }
+          <label>Main Message / Subject ({{2}}):</label>
+          <input type="text" name="text" placeholder="e.g. Aptitude Class Cancelled" required>
+
+          <label>Extra Info / Teacher Name ({{3}}):</label>
+          <input type="text" name="info" placeholder="e.g. Prof. Sachin Absent / Today" required value="BCA Dept">
+
+          <button type="submit">🚀 SEND WHATSAPP MESSAGE</button>
+        </form>
+      </div>
+    </body>
+    </html>
+  `);
+});
+
+// 🚀 ADMIN POST API (फॉर्म सबमिट झाल्यावर मेसेज सेंड होईल)
+app.post("/admin/send", (req, res) => {
+  const { title, text, info } = req.body;
+
+  if (!text) return res.send("❌ मेसेज टेक्स्ट रिकामे असू शकत नाही.");
 
   const msgTitle = title ? `[${title}]` : "📢 BCA Notice";
   const msgText = text;
   const msgInfo = info || "BCA Department";
 
   db.query("SELECT phone FROM bca_students", (err, results) => {
-    if (err || results.length === 0) return res.status(500).send("No students found.");
+    if (err || results.length === 0) {
+      return res.send("<h2 style='color:red;'>❌ सिस्टीममध्ये कोणतेही विद्यार्थी रजिस्टर नाहीत किंवा DB एरर.</h2>");
+    }
     
     results.forEach(row => {
       sendWhatsAppAlert(row.phone, msgTitle, msgText, msgInfo);
     });
     
-    res.send(`✅ Custom message ("${msgText}") सर्व विद्यार्थ्यांना यशस्वीरित्या पाठवला!`);
-  });
-});
-
-// 🚫 2. ADMIN ROUTE: लेक्चर कॅन्सल करण्यासाठी
-app.get("/api/cancel-lecture", (req, res) => {
-  const { subject, reason } = req.query;
-  
-  if (!subject) {
-    return res.status(400).send("❌ कृपया विषय (subject) टाका. उदा: ?subject=Aptitude&reason=Teacher%20Absent");
-  }
-
-  const cancelSubject = `CANCELLED: ${subject}`;
-  const cancelTeacher = reason || "Faculty Unavailable";
-  const cancelTime = "Today's Slot";
-
-  db.query("SELECT phone FROM bca_students", (err, results) => {
-    if (err || results.length === 0) return res.status(500).send("No students found.");
-    
-    results.forEach(row => {
-      sendWhatsAppAlert(row.phone, cancelSubject, cancelTeacher, cancelTime);
-    });
-    
-    res.send(`✅ ${subject} च्या लेक्चर कॅन्सलेशनचा मेसेज सर्व विद्यार्थ्यांना यशस्वीरित्या पाठवला!`);
-  });
-});
-
-// 🔄 3. ADMIN ROUTE: दुसऱ्या शिक्षकांनी लेक्चर घेतल्यास (Substitute Lecture)
-app.get("/api/substitute-lecture", (req, res) => {
-  const { subject, teacher, time } = req.query;
-
-  if (!subject || !teacher) {
-    return res.status(400).send("❌ कृपया subject आणि teacher टाका. उदा: ?subject=Computer%20Graphics&teacher=Prof.%20Anuj&time=01:45%20PM");
-  }
-
-  const subSubject = `[Updated Class] ${subject}`;
-  const subTeacher = teacher;
-  const subTime = time || "Current Slot";
-
-  db.query("SELECT phone FROM bca_students", (err, results) => {
-    if (err || results.length === 0) return res.status(500).send("No students found.");
-    
-    results.forEach(row => {
-      sendWhatsAppAlert(row.phone, subSubject, subTeacher, subTime);
-    });
-    
-    res.send(`✅ ${subject} (by ${teacher}) च्या बदलाचा मेसेज सर्व विद्यार्थ्यांना पाठवला!`);
+    res.send(`
+      <div style="text-align:center; padding:40px; font-family:sans-serif;">
+        <h2 style="color:green;">✅ WhatsApp Message Sent Successfully!</h2>
+        <p><b>Title:</b> ${msgTitle}<br><b>Text:</b> ${msgText}<br><b>Info:</b> ${msgInfo}</p>
+        <a href="/admin" style="display:inline-block; margin-top:15px; padding:10px 20px; background:#075e54; color:white; text-decoration:none; border-radius:5px;">← बॅक जा</a>
+      </div>
+    `);
   });
 });
 
