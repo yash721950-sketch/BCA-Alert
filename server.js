@@ -76,7 +76,7 @@ app.get("/status", (req, res) => {
   `);
 });
 
-// 🔗 Meta Webhook Verification (Meta कडून येणारी रिक्वेस्ट व्हेरीफाय करण्यासाठी)
+// 🔗 Meta Webhook Verification
 app.get("/webhook", (req, res) => {
   const mode = req.query["hub.mode"];
   const token = req.query["hub.verify_token"];
@@ -99,21 +99,34 @@ app.post("/webhook", (req, res) => {
   res.status(200).send("EVENT_RECEIVED");
 });
 
-// 📩 Meta API द्वारे WhatsApp मेसेज पाठवण्याचे फंक्शन
+// 📩 Meta API द्वारे WhatsApp मेसेज पाठवण्याचे फंक्शन (Lecture Alert Template सह)
 async function sendWhatsAppAlert(phoneNumber, subject, teacher, time) {
   let cleanPhone = phoneNumber.replace(/[^0-9]/g, "");
   if (cleanPhone.length === 10) cleanPhone = "91" + cleanPhone;
 
   const url = `https://graph.facebook.com/v18.0/${PHONE_NUMBER_ID}/messages`;
 
-  // 💡 टीप: टेस्ट करताना Meta चा Default Approved Template 'hello_world' वापरत आहोत
+  const subText = subject || "BCA Classes";
+  const teachText = teacher || "Department Faculty";
+  const timeText = time || "As per timetable";
+
   const payload = {
     messaging_product: "whatsapp",
     to: cleanPhone,
     type: "template",
     template: {
-      name: "hello_world",
-      language: { code: "en_US" }
+      name: "lecture_alert",
+      language: { code: "en_US" },
+      components: [
+        {
+          type: "body",
+          parameters: [
+            { type: "text", text: subText },   // {{1}}
+            { type: "text", text: teachText }, // {{2}}
+            { type: "text", text: timeText }   // {{3}}
+          ]
+        }
+      ]
     }
   };
 
@@ -129,7 +142,7 @@ async function sendWhatsAppAlert(phoneNumber, subject, teacher, time) {
 
     const data = await response.json();
     if (data.messages) {
-      console.log(`📩 Meta WhatsApp मेसेज ${cleanPhone} ला यशस्वीरित्या पाठवला!`);
+      console.log(`📩 Meta WhatsApp मेसेज ${cleanPhone} ला यशस्वीरित्या पाठवला! [Subject: ${subText}]`);
     } else {
       console.error(`❌ Meta Send Error:`, JSON.stringify(data, null, 2));
     }
@@ -339,4 +352,4 @@ cron.schedule("* * * * *", () => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Meta Official Server online at port ${PORT}`));
-      
+  
