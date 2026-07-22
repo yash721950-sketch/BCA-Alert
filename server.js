@@ -17,6 +17,9 @@ app.use(express.static(path.join(__dirname, "public")));
 const PHONE_NUMBER_ID = "1225231590674644"; 
 const ACCESS_TOKEN = "EAAdxAucVo1cBSEiiv0niYKHgPapGNE4hswRJ5PWlzZBnnDpF0g4iy3CQ4lcR2SWbYebP0j0YZABq4ep1x3r5DCK4tvFTP5aUK8TiJaGYtXj93tGZBLQPB55Mlcue6W9XCNYw9ywmLqrYgabpjg6NdoFedNfV7IRgLUH2VH4AVk66focEtdPhm0CSeTvTwZDZD"; 
 
+// 🔐 Meta Webhook Verify Token
+const VERIFY_TOKEN = "bcaalerts123"; 
+
 // 🛢️ MySQL डेटाबेस कनेक्शन (Aiven Cloud)
 const dbConfig = {
   host: "mysql-3a8a9382-yash721950-fa6f.b.aivencloud.com",      
@@ -73,6 +76,29 @@ app.get("/status", (req, res) => {
   `);
 });
 
+// 🔗 Meta Webhook Verification (Meta कडून येणारी रिक्वेस्ट व्हेरीफाय करण्यासाठी)
+app.get("/webhook", (req, res) => {
+  const mode = req.query["hub.mode"];
+  const token = req.query["hub.verify_token"];
+  const challenge = req.query["hub.challenge"];
+
+  if (mode && token) {
+    if (mode === "subscribe" && token === VERIFY_TOKEN) {
+      console.log("✅ Webhook Verified Successfully!");
+      res.status(200).send(challenge);
+    } else {
+      console.error("❌ Verification failed. Token mismatch!");
+      res.sendStatus(403);
+    }
+  } else {
+    res.sendStatus(400);
+  }
+});
+
+app.post("/webhook", (req, res) => {
+  res.status(200).send("EVENT_RECEIVED");
+});
+
 // 📩 Meta API द्वारे WhatsApp मेसेज पाठवण्याचे फंक्शन
 async function sendWhatsAppAlert(phoneNumber, subject, teacher, time) {
   let cleanPhone = phoneNumber.replace(/[^0-9]/g, "");
@@ -95,9 +121,9 @@ async function sendWhatsAppAlert(phoneNumber, subject, teacher, time) {
         {
           type: "body",
           parameters: [
-            { type: "text", text: subText },   // {{1}} = Title / Subject
-            { type: "text", text: teachText }, // {{2}} = Message Text / Teacher
-            { type: "text", text: timeText }   // {{3}} = Extra Info / Time
+            { type: "text", text: subText },   
+            { type: "text", text: teachText }, 
+            { type: "text", text: timeText }   
           ]
         }
       ]
@@ -125,7 +151,7 @@ async function sendWhatsAppAlert(phoneNumber, subject, teacher, time) {
   }
 }
 
-// 📲 ADMIN PANEL UI (टाइप करून पाठवण्यासाठीचा सुंदर फॉर्म)
+// 📲 ADMIN PANEL UI
 app.get("/admin", (req, res) => {
   res.send(`
     <!DOCTYPE html>
@@ -164,7 +190,7 @@ app.get("/admin", (req, res) => {
   `);
 });
 
-// 🚀 ADMIN POST API (फॉर्म सबमिट झाल्यावर मेसेज सेंड होईल)
+// 🚀 ADMIN POST API
 app.post("/admin/send", (req, res) => {
   const { title, text, info } = req.body;
 
