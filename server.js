@@ -72,20 +72,35 @@ app.get("/status", (req, res) => {
   `);
 });
 
-// 📩 Meta API द्वारे WhatsApp मेसेज पाठवण्याचे फंक्शन
-async function sendWhatsAppAlert(phoneNumber) {
+// 📩 Meta API द्वारे WhatsApp मेसेज पाठवण्याचे सुधारित फंक्शन (lecture_alert template सह)
+async function sendWhatsAppAlert(phoneNumber, subject, teacher, time) {
   let cleanPhone = phoneNumber.replace(/[^0-9]/g, "");
   if (cleanPhone.length === 10) cleanPhone = "91" + cleanPhone;
 
   const url = `https://graph.facebook.com/v18.0/${PHONE_NUMBER_ID}/messages`;
+
+  // जर विषय दिला नसेल (उदा. रजिस्ट्रेशन वेळेस), तर बाय-डिफॉल्ट व्हॅल्यूज सेट होतील
+  const subText = subject || "BCA Classes";
+  const teachText = teacher || "Department Faculty";
+  const timeText = time || "As per timetable";
 
   const payload = {
     messaging_product: "whatsapp",
     to: cleanPhone,
     type: "template",
     template: {
-      name: "hello_world", // Meta official default template
-      language: { code: "en_US" }
+      name: "lecture_alert", // आपण बनवलेला नवीन टेम्प्लेट
+      language: { code: "en_US" },
+      components: [
+        {
+          type: "body",
+          parameters: [
+            { type: "text", text: subText },   // {{1}} = Subject
+            { type: "text", text: teachText }, // {{2}} = Teacher
+            { type: "text", text: timeText }   // {{3}} = Time
+          ]
+        }
+      ]
     }
   };
 
@@ -101,7 +116,7 @@ async function sendWhatsAppAlert(phoneNumber) {
 
     const data = await response.json();
     if (data.messages) {
-      console.log(`📩 Meta WhatsApp मेसेज ${cleanPhone} ला यशस्वीरित्या पाठवला!`);
+      console.log(`📩 Meta WhatsApp मेसेज ${cleanPhone} ला यशस्वीरित्या पाठवला! [Subject: ${subText}]`);
     } else {
       console.error(`❌ Meta Send Error:`, JSON.stringify(data, null, 2));
     }
@@ -137,8 +152,8 @@ app.post("/api/subscribe", (req, res) => {
       db.query(sql, [cleanPhone, name, studentEnroll, sem], (err) => {
         if (err) return res.status(500).send("Database Error.");
         
-        // रजिस्ट्रेशन झाल्यावर वेलकम मेसेज ट्रिगर
-        sendWhatsAppAlert(cleanPhone);
+        // रजिस्ट्रेशन झाल्यावर वेलकम अलर्ट ट्रिगर
+        sendWhatsAppAlert(cleanPhone, "Registration Successful", "BCA Alert System", "Now Active");
         res.sendStatus(200);
       });
     });
@@ -207,7 +222,7 @@ cron.schedule("* * * * *", () => {
         db.query("SELECT phone FROM bca_students", (err, results) => {
           if (err || results.length === 0) return;
           results.forEach(row => {
-            sendWhatsAppAlert(row.phone);
+            sendWhatsAppAlert(row.phone, "Weekend Holiday", "No Classes Today", "Enjoy Weekend!");
           });
         });
         sentAlertsLog[holidayKey] = true;
@@ -231,7 +246,8 @@ cron.schedule("* * * * *", () => {
       db.query("SELECT phone FROM bca_students", (err, results) => {
         if (err || results.length === 0) return;
         results.forEach(row => {
-          sendWhatsAppAlert(row.phone);
+          // 🚀 इथे विषय, शिक्षक आणि वेळ पास केली आहे
+          sendWhatsAppAlert(row.phone, upcomingLecture.subject, upcomingLecture.teacher, upcomingLecture.start);
         });
       });
       sentAlertsLog[alertKey] = true;
@@ -244,4 +260,4 @@ cron.schedule("* * * * *", () => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Meta Official Server online at port ${PORT}`));
-                        
+                                                        
