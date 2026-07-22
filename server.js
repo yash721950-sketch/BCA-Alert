@@ -1,9 +1,13 @@
-const { default: makeWASocket, useMultiFileAuthState, DisconnectReason } = require("@whiskeysockets/baileys");
-const express = require("express");
-const cron = require("node-cron");
-const path = require("path");
-const mysql = require("mysql2");
-const QRCode = require("qrcode");
+import makeWASocket, { useMultiFileAuthState, DisconnectReason } from "@whiskeysockets/baileys";
+import express from "express";
+import cron from "node-cron";
+import path from "path";
+import { fileURLToPath } from "url";
+import mysql from "mysql2";
+import QRCode from "qrcode";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 app.use(express.json());
@@ -61,7 +65,6 @@ let currentQrDataUrl = null;
 
 // 🟢 Baileys WhatsApp Connection Function
 async function connectToWhatsApp() {
-  // लोकल फोल्डरमध्ये सेशन डेटा साठवला जाईल
   const { state, saveCreds } = await useMultiFileAuthState(path.join(__dirname, "auth_info_baileys"));
 
   sock = makeWASocket({
