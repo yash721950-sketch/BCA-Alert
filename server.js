@@ -12,9 +12,9 @@ const app = express();
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
 
-// 🔑 माझे Meta Official API Credentials (Permanent Token)
+// 🔑 माझे Meta Official API Credentials (नवीन व परफेक्ट Permissions सह)
 const PHONE_NUMBER_ID = "1225231590674644"; 
-const ACCESS_TOKEN = "EAAdxAucVo1cBSEw5nvlU4HpIPebuZAEgaztbEVbevsZBZClaptSoURpe1IIe2XTRPUVun4JBaYpTVAohXZBsi1fPy17NUqtXzyZBVI89t0hkcmZBVrssRCgTor5UTqlDAlp4huQpuMMsJ6KoE211KyVqsFxHBZC6KfrcXPZASJUdxybXX9UdsQrzRqElwG5PkQZDZD"; 
+const ACCESS_TOKEN = "EAAdxAucVo1cBSEiiv0niYKHgPapGNE4hswRJ5PWlzZBnnDpF0g4iy3CQ4lcR2SWbYebP0j0YZABq4ep1x3r5DCK4tvFTP5aUK8TiJaGYtXj93tGZBLQPB55Mlcue6W9XCNYw9ywmLqrYgabpjg6NdoFedNfV7IRgLUH2VH4AVk66focEtdPhm0CSeTvTwZDZD"; 
 
 // 🛢️ MySQL डेटाबेस कनेक्शन (Aiven Cloud)
 const dbConfig = {
@@ -62,12 +62,12 @@ function setupTables() {
   db.query(createStudentsTable, () => {});
 }
 
-// 🌐 स्टेटस चेक करण्यासाठीचा रूट (आता QR कोडची गरज नाही)
+// 🌐 स्टेटस चेक करण्यासाठीचा रूट
 app.get("/status", (req, res) => {
   res.send(`
     <div style="text-align: center; margin-top: 50px; font-family: Arial, sans-serif;">
       <h2 style="color: green;">✅ Meta Official WhatsApp API Active!</h2>
-      <p>बॉट कसल्याही स्कॅनिंगशिवाय १००% ऑटोमॅटिक बॅकग्राउंडला चालू आहे भावा! 😎</p>
+      <p>बॉट कसल्याही एररशिवाय १००% ऑटोमॅटिक बॅकग्राउंडला चालू आहे भावा! 😎</p>
     </div>
   `);
 });
@@ -84,7 +84,7 @@ async function sendWhatsAppAlert(phoneNumber) {
     to: cleanPhone,
     type: "template",
     template: {
-      name: "hello_world", // Meta official template
+      name: "hello_world", // Meta official default template
       language: { code: "en_US" }
     }
   };
@@ -103,7 +103,7 @@ async function sendWhatsAppAlert(phoneNumber) {
     if (data.messages) {
       console.log(`📩 Meta WhatsApp मेसेज ${cleanPhone} ला यशस्वीरित्या पाठवला!`);
     } else {
-      console.error(`❌ Meta Send Error:`, data);
+      console.error(`❌ Meta Send Error:`, JSON.stringify(data, null, 2));
     }
   } catch (err) {
     console.error(`❌ Fetch Request Error:`, err.message);
@@ -244,4 +244,4 @@ cron.schedule("* * * * *", () => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Meta Official Server online at port ${PORT}`));
-  
+                        
