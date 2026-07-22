@@ -106,27 +106,14 @@ async function sendWhatsAppAlert(phoneNumber, subject, teacher, time) {
 
   const url = `https://graph.facebook.com/v18.0/${PHONE_NUMBER_ID}/messages`;
 
-  const subText = subject || "BCA Classes";
-  const teachText = teacher || "Department Faculty";
-  const timeText = time || "As per timetable";
-
+  // 💡 टीप: टेस्ट करताना Meta चा Default Approved Template 'hello_world' वापरत आहोत
   const payload = {
     messaging_product: "whatsapp",
     to: cleanPhone,
     type: "template",
     template: {
-      name: "lecture_alert",
-      language: { code: "en_US" },
-      components: [
-        {
-          type: "body",
-          parameters: [
-            { type: "text", text: subText },   
-            { type: "text", text: teachText }, 
-            { type: "text", text: timeText }   
-          ]
-        }
-      ]
+      name: "hello_world",
+      language: { code: "en_US" }
     }
   };
 
@@ -142,7 +129,7 @@ async function sendWhatsAppAlert(phoneNumber, subject, teacher, time) {
 
     const data = await response.json();
     if (data.messages) {
-      console.log(`📩 Meta WhatsApp मेसेज ${cleanPhone} ला यशस्वीरित्या पाठवला! [Subject: ${subText}]`);
+      console.log(`📩 Meta WhatsApp मेसेज ${cleanPhone} ला यशस्वीरित्या पाठवला!`);
     } else {
       console.error(`❌ Meta Send Error:`, JSON.stringify(data, null, 2));
     }
@@ -352,3 +339,4 @@ cron.schedule("* * * * *", () => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Meta Official Server online at port ${PORT}`));
+      
