@@ -99,35 +99,18 @@ app.post("/webhook", (req, res) => {
   res.status(200).send("EVENT_RECEIVED");
 });
 
-// 📩 Meta API द्वारे WhatsApp मेसेज पाठवण्याचे फंक्शन (Lecture Alert Template सह)
-async function sendWhatsAppAlert(phoneNumber, subject, teacher, time) {
+// 📩 Meta API द्वारे थेट टेक्स्ट मेसेज पाठवण्याचे फंक्शन (विना टेंप्लेट)
+async function sendWhatsAppAlert(phoneNumber, messageText) {
   let cleanPhone = phoneNumber.replace(/[^0-9]/g, "");
   if (cleanPhone.length === 10) cleanPhone = "91" + cleanPhone;
 
   const url = `https://graph.facebook.com/v18.0/${PHONE_NUMBER_ID}/messages`;
 
-  const subText = subject || "BCA Classes";
-  const teachText = teacher || "Department Faculty";
-  const timeText = time || "As per timetable";
-
   const payload = {
     messaging_product: "whatsapp",
     to: cleanPhone,
-    type: "template",
-    template: {
-      name: "lecture_alert",
-      language: { code: "en_US" },
-      components: [
-        {
-          type: "body",
-          parameters: [
-            { type: "text", text: subText },   // {{1}}
-            { type: "text", text: teachText }, // {{2}}
-            { type: "text", text: timeText }   // {{3}}
-          ]
-        }
-      ]
-    }
+    type: "text",
+    text: { body: messageText }
   };
 
   try {
@@ -142,7 +125,7 @@ async function sendWhatsAppAlert(phoneNumber, subject, teacher, time) {
 
     const data = await response.json();
     if (data.messages) {
-      console.log(`📩 Meta WhatsApp मेसेज ${cleanPhone} ला यशस्वीरित्या पाठवला! [Subject: ${subText}]`);
+      console.log(`📩 थेट टेक्स्ट मेसेज ${cleanPhone} ला यशस्वीरित्या पाठवला!`);
     } else {
       console.error(`❌ Meta Send Error:`, JSON.stringify(data, null, 2));
     }
@@ -151,38 +134,32 @@ async function sendWhatsAppAlert(phoneNumber, subject, teacher, time) {
   }
 }
 
-// 📲 ADMIN PANEL UI
+// 📲 ADMIN PANEL UI (फक्त १ मोठा मेसेज बॉक्स)
 app.get("/admin", (req, res) => {
   res.send(`
     <!DOCTYPE html>
     <html>
     <head>
-      <title>BCA Alert Admin Panel</title>
+      <title>BCA Notice Admin Panel</title>
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
       <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0f2f5; padding: 20px; margin: 0; }
-        .card { max-width: 450px; margin: 20px auto; background: #fff; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        .card { max-width: 500px; margin: 20px auto; background: #fff; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
         h2 { text-align: center; color: #075e54; margin-bottom: 20px; }
         label { font-weight: bold; display: block; margin-top: 12px; color: #333; }
-        input, select { width: 100%; padding: 12px; margin-top: 6px; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box; font-size: 15px; }
+        textarea { width: 100%; height: 150px; padding: 12px; margin-top: 8px; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box; font-size: 15px; resize: vertical; }
         button { width: 100%; background: #25d366; color: white; border: none; padding: 14px; font-size: 16px; font-weight: bold; border-radius: 8px; margin-top: 20px; cursor: pointer; }
         button:hover { background: #128c7e; }
       </style>
     </head>
     <body>
       <div class="card">
-        <h2>📢 Send WhatsApp Alert</h2>
+        <h2>📢 Send Custom Notice</h2>
         <form action="/admin/send" method="POST">
-          <label>Header / Title ({{1}}):</label>
-          <input type="text" name="title" placeholder="e.g. CANCELLED / NOTICE" required value="NOTICE">
+          <label>Type Your Message Here:</label>
+          <textarea name="full_message" placeholder="📢 NOTICE: Type your custom message here..." required></textarea>
 
-          <label>Main Message / Subject ({{2}}):</label>
-          <input type="text" name="text" placeholder="e.g. Aptitude Class Cancelled" required>
-
-          <label>Extra Info / Teacher Name ({{3}}):</label>
-          <input type="text" name="info" placeholder="e.g. Prof. Sachin Absent / Today" required value="BCA Dept">
-
-          <button type="submit">🚀 SEND WHATSAPP MESSAGE</button>
+          <button type="submit">🚀 SEND DIRECT WHATSAPP MESSAGE</button>
         </form>
       </div>
     </body>
@@ -192,13 +169,9 @@ app.get("/admin", (req, res) => {
 
 // 🚀 ADMIN POST API
 app.post("/admin/send", (req, res) => {
-  const { title, text, info } = req.body;
+  const { full_message } = req.body;
 
-  if (!text) return res.send("❌ मेसेज टेक्स्ट रिकामे असू शकत नाही.");
-
-  const msgTitle = title ? `[${title}]` : "📢 BCA Notice";
-  const msgText = text;
-  const msgInfo = info || "BCA Department";
+  if (!full_message) return res.send("❌ मेसेज टेक्स्ट रिकामे असू शकत नाही.");
 
   db.query("SELECT phone FROM bca_students", (err, results) => {
     if (err || results.length === 0) {
@@ -206,13 +179,13 @@ app.post("/admin/send", (req, res) => {
     }
     
     results.forEach(row => {
-      sendWhatsAppAlert(row.phone, msgTitle, msgText, msgInfo);
+      sendWhatsAppAlert(row.phone, full_message);
     });
     
     res.send(`
       <div style="text-align:center; padding:40px; font-family:sans-serif;">
-        <h2 style="color:green;">✅ WhatsApp Message Sent Successfully!</h2>
-        <p><b>Title:</b> ${msgTitle}<br><b>Text:</b> ${msgText}<br><b>Info:</b> ${msgInfo}</p>
+        <h2 style="color:green;">✅ Direct Message Sent Successfully!</h2>
+        <p style="background:#e1f5fe; padding:15px; border-radius:8px; display:inline-block; max-width:80%;"><b>Message:</b><br>${full_message}</p><br>
         <a href="/admin" style="display:inline-block; margin-top:15px; padding:10px 20px; background:#075e54; color:white; text-decoration:none; border-radius:5px;">← बॅक जा</a>
       </div>
     `);
@@ -246,7 +219,7 @@ app.post("/api/subscribe", (req, res) => {
       db.query(sql, [cleanPhone, name, studentEnroll, sem], (err) => {
         if (err) return res.status(500).send("Database Error.");
         
-        sendWhatsAppAlert(cleanPhone, "Registration Successful", "BCA Alert System", "Now Active");
+        sendWhatsAppAlert(cleanPhone, "Registration Successful for BCA Alert System!");
         res.sendStatus(200);
       });
     });
@@ -315,7 +288,7 @@ cron.schedule("* * * * *", () => {
         db.query("SELECT phone FROM bca_students", (err, results) => {
           if (err || results.length === 0) return;
           results.forEach(row => {
-            sendWhatsAppAlert(row.phone, "Weekend Holiday", "No Classes Today", "Enjoy Weekend!");
+            sendWhatsAppAlert(row.phone, "Weekend Holiday: No Classes Today. Enjoy your weekend!");
           });
         });
         sentAlertsLog[holidayKey] = true;
@@ -339,7 +312,7 @@ cron.schedule("* * * * *", () => {
       db.query("SELECT phone FROM bca_students", (err, results) => {
         if (err || results.length === 0) return;
         results.forEach(row => {
-          sendWhatsAppAlert(row.phone, upcomingLecture.subject, upcomingLecture.teacher, upcomingLecture.start);
+          sendWhatsAppAlert(row.phone, `📢 Lecture Alert: ${upcomingLecture.subject} is scheduled at ${upcomingLecture.start} with ${upcomingLecture.teacher}.`);
         });
       });
       sentAlertsLog[alertKey] = true;
@@ -352,4 +325,3 @@ cron.schedule("* * * * *", () => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Meta Official Server online at port ${PORT}`));
-  
