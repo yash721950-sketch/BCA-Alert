@@ -239,7 +239,7 @@
                 document.getElementById('semester').value = "";
                 document.getElementById('phoneNumber').value = "";
             } else if (response.status === 409) {
-                // ⚠️ डुप्लिकेट एंट्री हँडल करण्यासाठी 409 स्टेटस चेक जोडला आहे
+                
                 statusMsg.style.color = "#ffb703";
                 statusMsg.innerText = "⚠️ You are already registered for alerts!";
             } else if (response.status === 403) {
