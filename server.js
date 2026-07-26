@@ -13,9 +13,9 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, "public")));
 
-// 🔔 OneSignal Push Notification Credentials
+// 🔔 OneSignal Push Notification Credentials (Environment Variable द्वारे)
 const ONESIGNAL_APP_ID = "d2ced897-0702-4d42-a341-8c9e0821cc6f";
-const ONESIGNAL_REST_API_KEY = "os_v2_app_2lhnrfyhajgufi2brspaqiomn65p373h5whedzvhibo72oacskcszreih7bt3y6rdafxv6aqsm74xmv2qopyagmnx2774s7w5zfkq3i";
+const ONESIGNAL_REST_API_KEY = process.env.ONESIGNAL_REST_API_KEY;
 
 // 🛢️ MySQL डेटाबेस कनेक्शन (Aiven Cloud)
 const dbConfig = {
@@ -75,6 +75,11 @@ app.get("/status", (req, res) => {
 
 // 🔔 OneSignal द्वारे सर्व मोबाईलवर (Android/iPhone) डायरेक्ट पुश नोटिफिकेशन पाठवण्याचे मुख्य फंक्शन
 async function sendOneSignalNotification(title, messageText) {
+  if (!ONESIGNAL_REST_API_KEY) {
+    console.error("❌ Error: ONESIGNAL_REST_API_KEY is not set in Environment Variables!");
+    return;
+  }
+
   try {
     const response = await fetch("https://onesignal.com/api/v1/notifications", {
       method: "POST",
