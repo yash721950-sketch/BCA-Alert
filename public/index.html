@@ -21,18 +21,13 @@
     <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
     
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
 
         :root {
             --primary-violet: #7b2cbf;
             --electric-blue: #0099ff;
             --glowing-green: #00ff88;
             --dark-bg: #0a0e27;
-            --glass-light: rgba(255, 255, 255, 0.1);
             --glass-border: rgba(255, 255, 255, 0.2);
         }
 
@@ -44,113 +39,31 @@
             min-height: 100vh;
         }
 
-        /* ============================================
-           ANIMATED FLOATING BACKGROUND ORBS
-           ============================================ */
         .background-container {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: 1;
-            overflow: hidden;
-            pointer-events: none;
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 1; overflow: hidden; pointer-events: none;
         }
 
-        .orb {
-            position: absolute;
-            border-radius: 50%;
-            filter: blur(80px);
-            opacity: 0.3;
-            mix-blend-mode: screen;
-        }
+        .orb { position: absolute; border-radius: 50%; filter: blur(80px); opacity: 0.3; mix-blend-mode: screen; }
+        .orb-1 { width: 300px; height: 300px; background: radial-gradient(circle, var(--primary-violet), transparent); top: -100px; left: -100px; animation: float-orb-1 20s ease-in-out infinite; }
+        .orb-2 { width: 400px; height: 400px; background: radial-gradient(circle, var(--electric-blue), transparent); bottom: -150px; right: -100px; animation: float-orb-2 25s ease-in-out infinite; }
+        .orb-3 { width: 250px; height: 250px; background: radial-gradient(circle, var(--glowing-green), transparent); top: 50%; right: 10%; animation: float-orb-3 22s ease-in-out infinite; }
 
-        .orb-1 {
-            width: 300px;
-            height: 300px;
-            background: radial-gradient(circle, var(--primary-violet), transparent);
-            top: -100px;
-            left: -100px;
-            animation: float-orb-1 20s ease-in-out infinite;
-        }
+        @keyframes float-orb-1 { 0%, 100% { transform: translate(0, 0); } 50% { transform: translate(100px, 0); } }
+        @keyframes float-orb-2 { 0%, 100% { transform: translate(0, 0); } 50% { transform: translate(-100px, 0); } }
+        @keyframes float-orb-3 { 0%, 100% { transform: translate(0, 0); } 50% { transform: translate(-80px, 80px); } }
 
-        .orb-2 {
-            width: 400px;
-            height: 400px;
-            background: radial-gradient(circle, var(--electric-blue), transparent);
-            bottom: -150px;
-            right: -100px;
-            animation: float-orb-2 25s ease-in-out infinite;
-        }
+        .avatar-bounce { animation: floatStudent 3.5s infinite ease-in-out; }
+        @keyframes floatStudent { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-12px); } }
 
-        .orb-3 {
-            width: 250px;
-            height: 250px;
-            background: radial-gradient(circle, var(--glowing-green), transparent);
-            top: 50%;
-            right: 10%;
-            animation: float-orb-3 22s ease-in-out infinite;
-        }
-
-        @keyframes float-orb-1 {
-            0%, 100% { transform: translate(0, 0); }
-            25% { transform: translate(50px, 50px); }
-            50% { transform: translate(100px, 0); }
-            75% { transform: translate(50px, -50px); }
-        }
-
-        @keyframes float-orb-2 {
-            0%, 100% { transform: translate(0, 0); }
-            25% { transform: translate(-50px, -50px); }
-            50% { transform: translate(-100px, 0); }
-            75% { transform: translate(-50px, 50px); }
-        }
-
-        @keyframes float-orb-3 {
-            0%, 100% { transform: translate(0, 0) rotate(0deg); }
-            50% { transform: translate(-80px, 80px) rotate(180deg); }
-        }
-
-        /* 🕺 FLOATING ANIMATED STUDENT AVATAR */
-        .avatar-bounce {
-            animation: floatStudent 3.5s infinite ease-in-out;
-        }
-        @keyframes floatStudent {
-            0%, 100% { transform: translateY(0px) rotate(0deg); }
-            50% { transform: translateY(-12px) rotate(1.5deg); }
-        }
-
-        /* ============================================
-           GLASSMORPHISM CARD STYLES
-           ============================================ */
         .glass-card {
-            background: rgba(20, 20, 40, 0.7);
+            background: rgba(20, 20, 40, 0.75);
             backdrop-filter: blur(20px);
             border: 1px solid var(--glass-border);
             border-radius: 20px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
         }
 
-        .glass-card:hover {
-            background: rgba(20, 20, 40, 0.85);
-            border-color: rgba(255, 255, 255, 0.3);
-            box-shadow: 0 12px 48px rgba(123, 44, 191, 0.2);
-        }
-
-        /* ============================================
-           NEON GLOW EFFECTS
-           ============================================ */
-        .neon-glow {
-            text-shadow: 0 0 10px var(--glowing-green),
-                         0 0 20px var(--glowing-green),
-                         0 0 30px var(--electric-blue);
-        }
-
-        /* ============================================
-           INPUT FIELD ANIMATIONS
-           ============================================ */
         .input-field {
             background: rgba(255, 255, 255, 0.05);
             border: 2px solid rgba(255, 255, 255, 0.1);
@@ -159,140 +72,35 @@
             color: #e0e0e0;
             font-size: 14px;
             width: 100%;
-            transition: all 0.3s ease;
         }
 
-        .input-field:focus {
-            outline: none;
-            background: rgba(255, 255, 255, 0.08);
-            border-color: var(--electric-blue);
-            box-shadow: 0 0 20px rgba(0, 153, 255, 0.4),
-                       inset 0 0 10px rgba(0, 153, 255, 0.1);
-        }
+        .input-field:focus { outline: none; border-color: var(--electric-blue); box-shadow: 0 0 15px rgba(0, 153, 255, 0.4); }
 
-        .input-label {
-            display: block;
-            font-size: 12px;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            color: rgba(224, 224, 224, 0.7);
-            margin-bottom: 8px;
-        }
+        .input-label { display: block; font-size: 12px; font-weight: 600; text-transform: uppercase; color: rgba(224, 224, 224, 0.7); margin-bottom: 6px; }
 
-        /* ============================================
-           BUTTON ANIMATIONS
-           ============================================ */
         .btn-primary {
             background: linear-gradient(135deg, var(--primary-violet), var(--electric-blue));
-            color: white;
-            border: none;
-            border-radius: 12px;
-            padding: 12px 24px;
-            font-weight: 600;
-            font-size: 14px;
-            cursor: pointer;
-            width: 100%;
-            position: relative;
-            overflow: hidden;
-            transition: all 0.3s ease;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            box-shadow: 0 0 20px rgba(123, 44, 191, 0.4);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
+            color: white; border: none; border-radius: 12px; padding: 12px 24px; font-weight: 600; font-size: 14px; cursor: pointer; width: 100%;
+            text-transform: uppercase; display: flex; align-items: center; justify-content: center; gap: 8px;
         }
 
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 0 30px rgba(123, 44, 191, 0.6),
-                       0 0 60px rgba(0, 153, 255, 0.3);
-        }
+        .btn-action { border: none; border-radius: 12px; padding: 12px 20px; font-weight: 600; font-size: 13px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; }
+        .btn-present { background: linear-gradient(135deg, var(--glowing-green), #00cc66); color: #000; }
+        .btn-absent { background: linear-gradient(135deg, #ff3333, #cc0000); color: white; }
 
-        /* ============================================
-           ACTION BUTTON ANIMATIONS
-           ============================================ */
-        .btn-action {
-            border: none;
-            border-radius: 12px;
-            padding: 12px 20px;
-            font-weight: 600;
-            font-size: 13px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            width: 100%;
-        }
+        .action-buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 15px; }
 
-        .btn-present {
-            background: linear-gradient(135deg, var(--glowing-green), #00cc66);
-            color: #000;
-            box-shadow: 0 0 20px rgba(0, 255, 136, 0.4);
-        }
-
-        .btn-present:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 0 30px rgba(0, 255, 136, 0.6);
-        }
-
-        .btn-absent {
-            background: linear-gradient(135deg, #ff3333, #cc0000);
-            color: white;
-            box-shadow: 0 0 20px rgba(255, 51, 51, 0.4);
-        }
-
-        .btn-absent:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 0 30px rgba(255, 51, 51, 0.6);
-        }
-
-        .action-buttons {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 12px;
-            margin-top: 15px;
-        }
-
-        /* ============================================
-           ICON & BADGE ANIMATIONS
-           ============================================ */
-        .icon-bell {
-            font-size: 22px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            animation: swing 2s ease-in-out infinite;
-        }
-
-        @keyframes swing {
-            0%, 100% { transform: rotate(0deg); }
-            25% { transform: rotate(-15deg); }
-            75% { transform: rotate(15deg); }
-        }
-
-        .form-container {
-            width: 100%;
-            max-width: 420px;
-            z-index: 10;
-        }
+        .form-container { width: 100%; max-width: 450px; z-index: 10; }
     </style>
 </head>
 <body class="flex items-center justify-center min-h-screen p-4 relative">
 
-    <!-- FLOATING BACKGROUND ORBS -->
     <div class="background-container">
         <div class="orb orb-1"></div>
         <div class="orb orb-2"></div>
         <div class="orb orb-3"></div>
     </div>
 
-    <!-- MAIN APP CONTAINER -->
     <div class="form-container">
 
         <!-- TOP BAR -->
@@ -306,42 +114,32 @@
                     <p class="text-xs text-purple-300/80">G H Raisoni University</p>
                 </div>
             </div>
-            <div class="relative">
-                <i class="fa-solid fa-bell icon-bell text-purple-300"></i>
-                <span class="absolute -top-1 -right-1 w-2.5 h-2.5 bg-emerald-400 rounded-full"></span>
+            <div class="flex items-center gap-3">
+                <button onclick="openAdminModal()" class="text-xs bg-purple-600/40 hover:bg-purple-600/60 text-purple-200 px-3 py-1.5 rounded-xl border border-purple-400/30 font-semibold">
+                    👑 Admin
+                </button>
             </div>
         </div>
 
-        <!-- 1️⃣ SCREEN 1: LOGIN FORM WITH CUSTOM RAISONI STUDENT AVATAR -->
+        <!-- 1️⃣ SCREEN 1: LOGIN FORM -->
         <div id="loginCard" class="glass-card p-6 animate__animated animate__fadeInUp">
             
-            <!-- 🎨 CUSTOM 3D ANIMATED RAISONI STUDENT AVATAR -->
             <div class="flex justify-center mb-3">
                 <div class="avatar-bounce">
                     <svg class="w-28 h-28 drop-shadow-[0_10px_20px_rgba(123,44,191,0.5)]" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <circle cx="100" cy="100" r="85" fill="url(#avatarGlow)" fill-opacity="0.25"/>
-                        <!-- Head & Hair -->
                         <path d="M100 40C83 40 70 53 70 70C70 82 78 92 88 97V105H112V97C122 92 130 82 130 70C130 53 117 40 100 40Z" fill="#F3D0B5"/>
                         <path d="M100 35C80 35 68 48 68 65C72 65 78 58 88 58C98 58 102 52 108 52C118 52 122 62 132 62C132 45 120 35 100 35Z" fill="#2D213F"/>
-                        
-                        <!-- Face Eyes & Smile -->
                         <circle cx="88" cy="72" r="3" fill="#2D213F"/>
                         <circle cx="112" cy="72" r="3" fill="#2D213F"/>
                         <path d="M94 83C94 83 97 87 100 87C103 87 106 83 106 83" stroke="#2D213F" stroke-width="2.5" stroke-linecap="round"/>
-
-                        <!-- White T-Shirt Body -->
                         <path d="M60 120C60 110 75 105 100 105C125 105 140 110 140 120L148 180H52L60 120Z" fill="#FFFFFF"/>
                         <path d="M88 105L100 115L112 105" stroke="#7b2cbf" stroke-width="3" stroke-linecap="round"/>
-
-                        <!-- 👕 "Raisoni Education" Chest Logo in Purple -->
                         <rect x="70" y="132" width="60" height="18" rx="4" fill="#F3E8FF" opacity="0.95"/>
                         <text x="100" y="141" fill="#7b2cbf" font-size="6.5" font-family="sans-serif" font-weight="900" text-anchor="middle">RAISONI</text>
                         <text x="100" y="147" fill="#5c1d91" font-size="4.5" font-family="sans-serif" font-weight="700" text-anchor="middle">EDUCATION</text>
-
-                        <!-- Backpack Straps -->
                         <path d="M68 115L62 160" stroke="#0099ff" stroke-width="5" stroke-linecap="round"/>
                         <path d="M132 115L138 160" stroke="#0099ff" stroke-width="5" stroke-linecap="round"/>
-
                         <defs>
                             <radialGradient id="avatarGlow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(100 100) scale(85)">
                                 <stop stop-color="#9D4EDD"/>
@@ -427,7 +225,7 @@
             </div>
         </div>
 
-        <!-- 3️⃣ SCREEN 3: LIVE DASHBOARD & ATTENDANCE -->
+        <!-- 3️⃣ SCREEN 3: STUDENT DASHBOARD & ATTENDANCE -->
         <div id="dashboardCard" class="glass-card p-6 hidden animate__animated animate__fadeIn">
             <div class="flex items-center justify-between border-b border-white/10 pb-4 mb-4">
                 <div>
@@ -466,10 +264,55 @@
                 </div>
             </div>
 
-            <!-- Status Result Display -->
             <div id="statusResultCard" class="bg-white/5 rounded-2xl p-4 text-center border border-white/10">
                 <p class="text-xs text-gray-400 mb-1">Today's Attendance Status</p>
                 <p id="statusText" class="text-sm font-bold text-gray-300">Pending Selection...</p>
+            </div>
+        </div>
+
+        <!-- 👑 4️⃣ SCREEN 4: ADMIN DASHBOARD MODAL -->
+        <div id="adminModal" class="fixed inset-0 bg-black/80 backdrop-blur-md hidden flex items-center justify-center p-4 z-50">
+            <div class="glass-card w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto">
+                <div class="flex justify-between items-center mb-4 pb-2 border-b border-white/10">
+                    <h3 class="text-lg font-bold text-purple-300 flex items-center gap-2">
+                        👑 Admin Attendance Control
+                    </h3>
+                    <button onclick="closeAdminModal()" class="text-gray-400 hover:text-white text-xl">&times;</button>
+                </div>
+
+                <!-- Teacher Selection for WhatsApp Share -->
+                <div class="mb-5 bg-white/5 p-3.5 rounded-xl border border-white/10">
+                    <label class="input-label">Send Live WhatsApp Attendance Report</label>
+                    <div class="grid grid-cols-2 gap-2 mt-2">
+                        <select id="adminSubject" class="input-field bg-slate-800 text-xs">
+                            <option value="Computer Graphics">Computer Graphics</option>
+                            <option value="Advance Excel Lab">Advance Excel Lab</option>
+                            <option value="Ecommerce">Ecommerce</option>
+                            <option value="Modern Operating System">Modern Operating System</option>
+                        </select>
+                        <select id="adminTeacher" class="input-field bg-slate-800 text-xs">
+                            <option value="Prof. Anuj S. Deshmukh">Prof. Anuj S. Deshmukh</option>
+                            <option value="Dr. Vaibhav V. Thakare">Dr. Vaibhav V. Thakare</option>
+                            <option value="Prof. Rahul G. Nimbokar">Prof. Rahul G. Nimbokar</option>
+                            <option value="Dr. Sonali Nimbhorkar">Dr. Sonali Nimbhorkar</option>
+                            <option value="Prof. Shekhar Todakar">Prof. Shekhar Todakar</option>
+                            <option value="Dr. Shailesh R. Thakare">Dr. Shailesh R. Thakare</option>
+                            <option value="Prof. Pranav A. Dhabarde">Prof. Pranav A. Dhabarde</option>
+                            <option value="Dr. Amar More">Dr. Amar More</option>
+                            <option value="Prof. Ashwini Rathi">Prof. Ashwini Rathi</option>
+                            <option value="Sachin J. Deshpande">Sachin J. Deshpande</option>
+                        </select>
+                    </div>
+                    <button onclick="sendWhatsAppReport()" class="w-full mt-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2.5 rounded-xl text-xs flex items-center justify-center gap-2">
+                        <i class="fa-brands fa-whatsapp text-lg"></i> Send Attendance To Teacher WhatsApp
+                    </button>
+                </div>
+
+                <!-- Today's Recorded Attendance Table -->
+                <h4 class="text-xs font-bold text-gray-300 uppercase mb-2">Today's Recorded Attendance</h4>
+                <div id="attendanceList" class="space-y-2 mb-4">
+                    <p class="text-xs text-gray-400 text-center">Loading list...</p>
+                </div>
             </div>
         </div>
 
@@ -481,4 +324,45 @@
 
         function toggleAuth(type) {
             const loginCard = document.getElementById('loginCard');
-            const reg
+            const regCard = document.getElementById('registerCard');
+            if (type === 'register') {
+                loginCard.classList.add('hidden');
+                regCard.classList.remove('hidden');
+            } else {
+                regCard.classList.add('hidden');
+                loginCard.classList.remove('hidden');
+            }
+        }
+
+        async function handleLogin(e) {
+            e.preventDefault();
+            const enroll = document.getElementById('loginEnroll').value;
+            const phone = document.getElementById('loginPhone').value;
+
+            try {
+                const res = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ enroll_no: enroll, phone: phone })
+                });
+                const data = await res.json();
+
+                if (data.success) {
+                    currentStudent = data.student;
+                    openDashboard();
+                } else {
+                    alert(data.error || "Login Failed!");
+                }
+            } catch (err) {
+                alert("Server connection error.");
+            }
+        }
+
+        async function handleRegister(e) {
+            e.preventDefault();
+            const payload = {
+                name: document.getElementById('regName').value,
+                enroll_no: document.getElementById('regEnroll').value,
+                phone: document.getElementById('regPhone').value,
+                sem: document.getElementById('regSem').value
+    
