@@ -152,7 +152,7 @@ app.post("/admin/send", async (req, res) => {
   `);
 });
 
-// 🌐 Student Registration API
+// 🌐 Student Registration API (Fixed MySQL Query)
 const allowedEnrollments = [];
 for (let i = 1; i <= 80; i++) {
   const paddedNumber = String(i).padStart(4, '0');
@@ -171,13 +171,21 @@ app.post("/api/subscribe", (req, res) => {
 
   if (cleanPhone.length === 10) {
     const checkSql = "SELECT * FROM bca_students WHERE phone = ? OR enroll_no = ?";
-    db.query(checkSql, [checkSql, cleanPhone, studentEnroll], (checkErr, results) => {
-      if (checkErr) return res.status(500).send("Database Error.");
-      if (results.length > 0) return res.status(409).send("Already Registered.");
+    
+    // 🔧 Fixed: checkSql array मधून नको असलेला extra parameter काढला
+    db.query(checkSql, [cleanPhone, studentEnroll], (checkErr, results) => {
+      if (checkErr) {
+        console.error("❌ SQL Check Error:", checkErr.message);
+        return res.status(500).send("Database Error.");
+      }
+      if (results && results.length > 0) return res.status(409).send("Already Registered.");
 
-      const sql = "INSERT INTO bca_students (phone, name, enroll_no, sem) VALUES (?, ?, ?, ?)";
-      db.query(sql, [cleanPhone, name, studentEnroll, sem], (err) => {
-        if (err) return res.status(500).send("Database Error.");
+      const insertSql = "INSERT INTO bca_students (phone, name, enroll_no, sem) VALUES (?, ?, ?, ?)";
+      db.query(insertSql, [cleanPhone, name, studentEnroll, sem], (err) => {
+        if (err) {
+          console.error("❌ SQL Insert Error:", err.message);
+          return res.status(500).send("Database Error.");
+        }
         res.sendStatus(200);
       });
     });
