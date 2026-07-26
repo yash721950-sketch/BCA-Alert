@@ -73,7 +73,7 @@ app.get("/status", (req, res) => {
   `);
 });
 
-// 🔔 OneSignal द्वारे डायरेक्ट पुश नोटिफिकेशन पाठवण्याचे मुख्य फंक्शन (.trim() सह सुरक्षित)
+// 🔔 OneSignal द्वारे डायरेक्ट पुश नोटिफिकेशन पाठवण्याचे मुख्य फंक्शन ('Key' हेडर सह)
 async function sendOneSignalNotification(title, messageText) {
   if (!ONESIGNAL_REST_API_KEY) {
     console.error("❌ Error: ONESIGNAL_REST_API_KEY is not set in Environment Variables!");
@@ -88,7 +88,7 @@ async function sendOneSignalNotification(title, messageText) {
       method: "POST",
       headers: {
         "Content-Type": "application/json; charset=utf-8",
-        "Authorization": `Basic ${cleanKey}`
+        "Authorization": `Key ${cleanKey}`
       },
       body: JSON.stringify({
         app_id: ONESIGNAL_APP_ID,
