@@ -13,11 +13,9 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, "public")));
 
-// 🔔 OneSignal Push Notification Credentials
+// 🔔 OneSignal Credentials (ONLY via Environment Variables)
 const ONESIGNAL_APP_ID = "d2ced897-0702-4d42-a341-8c9e0821cc6f";
-
-// 🔑 Environment Variable किंवा नवीन REST API Key
-const ONESIGNAL_REST_API_KEY = process.env.ONESIGNAL_REST_API_KEY || "os_v2_app_2lhnrfyhajgufi2brspaqiomn5qqhhsotlau4ivvxjhchnhkcqvnwmpgjz3okxdowneubcwazguknvegqwbyaz5owcwm3oaweazxa4y";
+const ONESIGNAL_REST_API_KEY = process.env.ONESIGNAL_REST_API_KEY;
 
 // 🛢️ MySQL डेटाबेस कनेक्शन (Aiven Cloud)
 const dbConfig = {
@@ -65,7 +63,6 @@ function setupTables() {
   db.query(createStudentsTable, () => {});
 }
 
-// 🌐 स्टेटस चेक करण्यासाठीचा रूट
 app.get("/status", (req, res) => {
   res.send(`
     <div style="text-align: center; margin-top: 50px; font-family: Arial, sans-serif;">
@@ -77,6 +74,11 @@ app.get("/status", (req, res) => {
 
 // 🔔 OneSignal द्वारे डायरेक्ट पुश नोटिफिकेशन पाठवण्याचे मुख्य फंक्शन
 async function sendOneSignalNotification(title, messageText) {
+  if (!ONESIGNAL_REST_API_KEY) {
+    console.error("❌ Error: ONESIGNAL_REST_API_KEY is missing in Render Environment!");
+    return;
+  }
+
   const cleanKey = ONESIGNAL_REST_API_KEY.trim();
 
   try {
@@ -134,13 +136,11 @@ app.get("/admin", (req, res) => {
   `);
 });
 
-// 🚀 ADMIN POST API (PWA Push Notification)
 app.post("/admin/send", async (req, res) => {
   const { full_message } = req.body;
 
   if (!full_message) return res.send("❌ मेसेज टेक्स्ट रिकामे असू शकत नाही.");
 
-  // PWA Push Notification ब्रॉडकास्ट करा
   await sendOneSignalNotification("📢 BCA Department Notice", full_message);
 
   res.send(`
@@ -171,7 +171,7 @@ app.post("/api/subscribe", (req, res) => {
 
   if (cleanPhone.length === 10) {
     const checkSql = "SELECT * FROM bca_students WHERE phone = ? OR enroll_no = ?";
-    db.query(checkSql, [cleanPhone, studentEnroll], (checkErr, results) => {
+    db.query(checkSql, [checkSql, cleanPhone, studentEnroll], (checkErr, results) => {
       if (checkErr) return res.status(500).send("Database Error.");
       if (results.length > 0) return res.status(409).send("Already Registered.");
 
@@ -186,7 +186,7 @@ app.post("/api/subscribe", (req, res) => {
   }
 });
 
-// ⏰ Timetable and Cron Job (PWA Push Notification)
+// ⏰ Timetable and Cron Job
 let sentAlertsLog = {}; 
 const timetable = {
   MON: [
