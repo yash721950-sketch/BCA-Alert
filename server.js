@@ -73,7 +73,7 @@ app.get("/status", (req, res) => {
   `);
 });
 
-// 🔔 OneSignal द्वारे डायरेक्ट पुश नोटिफिकेशन पाठवण्याचे मुख्य फंक्शन ('Key' हेडर सह)
+// 🔔 OneSignal द्वारे डायरेक्ट पुश नोटिफिकेशन पाठवण्याचे मुख्य फंक्शन (v16 API Compatible)
 async function sendOneSignalNotification(title, messageText) {
   if (!ONESIGNAL_REST_API_KEY) {
     console.error("❌ Error: ONESIGNAL_REST_API_KEY is not set in Environment Variables!");
@@ -92,7 +92,7 @@ async function sendOneSignalNotification(title, messageText) {
       },
       body: JSON.stringify({
         app_id: ONESIGNAL_APP_ID,
-        included_segments: ["All"], // सर्व युझर्सना नोटिफिकेशन जाईल
+        included_segments: ["Total Subscriptions", "All"], // सर्व सब्सक्राईब झालेल्या युझर्सना मेसेज जाईल
         headings: { en: title || "📢 BCA Department Alert" },
         contents: { en: messageText }
       })
