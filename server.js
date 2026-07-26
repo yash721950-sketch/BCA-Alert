@@ -13,7 +13,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, "public")));
 
-// 🔔 OneSignal Push Notification Credentials (Environment Variable द्वारे)
+// 🔔 OneSignal Push Notification Credentials (via Environment Variable)
 const ONESIGNAL_APP_ID = "d2ced897-0702-4d42-a341-8c9e0821cc6f";
 const ONESIGNAL_REST_API_KEY = process.env.ONESIGNAL_REST_API_KEY;
 
@@ -73,19 +73,22 @@ app.get("/status", (req, res) => {
   `);
 });
 
-// 🔔 OneSignal द्वारे सर्व मोबाईलवर (Android/iPhone) डायरेक्ट पुश नोटिफिकेशन पाठवण्याचे मुख्य फंक्शन
+// 🔔 OneSignal द्वारे डायरेक्ट पुश नोटिफिकेशन पाठवण्याचे मुख्य फंक्शन (.trim() सह सुरक्षित)
 async function sendOneSignalNotification(title, messageText) {
   if (!ONESIGNAL_REST_API_KEY) {
     console.error("❌ Error: ONESIGNAL_REST_API_KEY is not set in Environment Variables!");
     return;
   }
 
+  // 🧹 Extra spaces किंवा newline ट्रिम करा
+  const cleanKey = ONESIGNAL_REST_API_KEY.trim();
+
   try {
     const response = await fetch("https://onesignal.com/api/v1/notifications", {
       method: "POST",
       headers: {
         "Content-Type": "application/json; charset=utf-8",
-        "Authorization": `Basic ${ONESIGNAL_REST_API_KEY}`
+        "Authorization": `Basic ${cleanKey}`
       },
       body: JSON.stringify({
         app_id: ONESIGNAL_APP_ID,
