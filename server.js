@@ -13,9 +13,11 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, "public")));
 
-// 🔔 OneSignal Push Notification Credentials (via Environment Variable)
+// 🔔 OneSignal Push Notification Credentials
 const ONESIGNAL_APP_ID = "d2ced897-0702-4d42-a341-8c9e0821cc6f";
-const ONESIGNAL_REST_API_KEY = process.env.ONESIGNAL_REST_API_KEY;
+
+// 🔑 Environment Variable किंवा नवीन REST API Key
+const ONESIGNAL_REST_API_KEY = process.env.ONESIGNAL_REST_API_KEY || "os_v2_app_2lhnrfyhajgufi2brspaqiomn5qqhhsotlau4ivvxjhchnhkcqvnwmpgjz3okxdowneubcwazguknvegqwbyaz5owcwm3oaweazxa4y";
 
 // 🛢️ MySQL डेटाबेस कनेक्शन (Aiven Cloud)
 const dbConfig = {
@@ -73,14 +75,8 @@ app.get("/status", (req, res) => {
   `);
 });
 
-// 🔔 OneSignal द्वारे डायरेक्ट पुश नोटिफिकेशन पाठवण्याचे मुख्य फंक्शन (v16 API Compatible)
+// 🔔 OneSignal द्वारे डायरेक्ट पुश नोटिफिकेशन पाठवण्याचे मुख्य फंक्शन
 async function sendOneSignalNotification(title, messageText) {
-  if (!ONESIGNAL_REST_API_KEY) {
-    console.error("❌ Error: ONESIGNAL_REST_API_KEY is not set in Environment Variables!");
-    return;
-  }
-
-  // 🧹 Extra spaces किंवा newline ट्रिम करा
   const cleanKey = ONESIGNAL_REST_API_KEY.trim();
 
   try {
@@ -92,7 +88,7 @@ async function sendOneSignalNotification(title, messageText) {
       },
       body: JSON.stringify({
         app_id: ONESIGNAL_APP_ID,
-        included_segments: ["Total Subscriptions", "All"], // सर्व सब्सक्राईब झालेल्या युझर्सना मेसेज जाईल
+        included_segments: ["All", "Total Subscriptions"],
         headings: { en: title || "📢 BCA Department Alert" },
         contents: { en: messageText }
       })
@@ -138,7 +134,7 @@ app.get("/admin", (req, res) => {
   `);
 });
 
-// 🚀 ADMIN POST API (फक्त PWA Push Notification जाईल)
+// 🚀 ADMIN POST API (PWA Push Notification)
 app.post("/admin/send", async (req, res) => {
   const { full_message } = req.body;
 
@@ -190,7 +186,7 @@ app.post("/api/subscribe", (req, res) => {
   }
 });
 
-// ⏰ Timetable and Cron Job (फक्त PWA Push Notification)
+// ⏰ Timetable and Cron Job (PWA Push Notification)
 let sentAlertsLog = {}; 
 const timetable = {
   MON: [
