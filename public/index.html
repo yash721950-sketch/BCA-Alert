@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="mr">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -37,15 +37,15 @@
       await OneSignal.init({
         appId: "d2ced897-0702-4d42-a341-8c9e0821cc6f",
         notifyButton: {
-          enable: true,             /* 👈 Bell Icon ऑन करण्यासाठी */
-          size: 'medium',           /* Small, Medium, किंवा Large */
+          enable: true,             /* Enable Bell Icon Floating Widget */
+          size: 'medium',           /* Size options: small, medium, large */
           theme: 'default',
-          position: 'bottom-right', /* स्क्रीनवर उजव्या कोपऱ्यात दिसेल */
+          position: 'bottom-right', /* Position on the screen */
         },
         allowLocalhostAsSecureOrigin: true,
       });
 
-      // 🚀 युझरने अजून Allow केले नसेल, तर ऑटोमॅटिक Permission Prompt दाखवा
+      // Automatically trigger permission prompt if notifications are not granted yet
       if (OneSignal.Notifications.permission !== "granted") {
         await OneSignal.Notifications.requestPermission();
       }
@@ -63,17 +63,17 @@
     <div class="card">
       <form id="subscribeForm">
         <div class="form-group">
-          <label for="name">Full Name (पूर्ण नाव)</label>
+          <label for="name">Full Name</label>
           <input type="text" id="name" placeholder="Enter your full name" required>
         </div>
 
         <div class="form-group">
-          <label for="enroll_no">Enrollment Number (उदा. GHRUA25011140001)</label>
+          <label for="enroll_no">Enrollment Number (e.g. GHRUA25011140001)</label>
           <input type="text" id="enroll_no" placeholder="GHRUA2501114..." required>
         </div>
 
         <div class="form-group">
-          <label for="sem">Semester (सेमिस्टर)</label>
+          <label for="sem">Semester</label>
           <select id="sem" required>
             <option value="">Select Semester</option>
             <option value="Sem 1">Sem 1</option>
@@ -86,7 +86,7 @@
         </div>
 
         <div class="form-group">
-          <label for="phone">Mobile Number (व्हॉट्सॲप / टेलिफोन)</label>
+          <label for="phone">Mobile Number</label>
           <input type="tel" id="phone" placeholder="10 Digit Mobile Number" required pattern="[0-9]{10}">
         </div>
 
@@ -98,7 +98,7 @@
   </div>
 
   <script>
-    // Registration Form JS
+    // Registration Form JavaScript Handler
     document.getElementById("subscribeForm").addEventListener("submit", async (e) => {
       e.preventDefault();
       const statusMsg = document.getElementById("statusMsg");
@@ -118,25 +118,25 @@
 
         if (res.ok) {
           statusMsg.className = "success";
-          statusMsg.innerText = "✅ रजिस्ट्रेशन यशस्वीरित्या पूर्ण झाले! तुम्हाला आता सर्व अलर्ट्स मिळतील.";
+          statusMsg.innerText = "✅ Registration successful! You will receive all departmental alerts.";
           statusMsg.style.display = "block";
           document.getElementById("subscribeForm").reset();
         } else if (res.status === 409) {
           statusMsg.className = "error";
-          statusMsg.innerText = "⚠️ तुम्ही आधीच रजिस्टर झालेले आहात!";
+          statusMsg.innerText = "⚠️ You are already registered!";
           statusMsg.style.display = "block";
         } else if (res.status === 403) {
           statusMsg.className = "error";
-          statusMsg.innerText = "❌ अमान्य एनरोलमेंट नंबर!";
+          statusMsg.innerText = "❌ Invalid Enrollment Number!";
           statusMsg.style.display = "block";
         } else {
           statusMsg.className = "error";
-          statusMsg.innerText = "❌ काहीतरी चुकीचे घडले, कृपया नंतर प्रयत्न करा.";
+          statusMsg.innerText = "❌ Something went wrong, please try again later.";
           statusMsg.style.display = "block";
         }
       } catch (err) {
         statusMsg.className = "error";
-        statusMsg.innerText = "❌ सर्व्हरशी संपर्क होऊ शकला नाही.";
+        statusMsg.innerText = "❌ Unable to connect to the server.";
         statusMsg.style.display = "block";
       }
     });
