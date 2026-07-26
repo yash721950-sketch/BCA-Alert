@@ -1,284 +1,146 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="mr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BCA Alerts | Secure Portal</title>
-    
-    <!-- 📲 PWA Manifest & Theme Settings -->
-    <link rel="manifest" href="/manifest.json">
-    <meta name="theme-color" content="#7b2cbf">
-    <meta name="mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="BCA Alerts">
-    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/2643/2643509.png">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BCA Department Alert System</title>
+  
+  <!-- PWA Manifest & Theme Color -->
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#7b2cbf">
 
-    <!-- 🔔 OneSignal Push Notifications SDK Integration -->
-    <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
-    <script>
-      window.OneSignalDeferred = window.OneSignalDeferred || [];
-      OneSignalDeferred.push(async function(OneSignal) {
-        await OneSignal.init({
-          appId: "d2ced897-0702-4d42-a341-8c9e0821cc6f",
-          safari_web_id: "web.onesignal.auto.44737891-769a-4856-a052-0f3c94719003",
-          notifyButton: {
-            enable: true,
-          },
-        });
+  <!-- Style CSS -->
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background: #f4f6f9; color: #333; line-height: 1.6; }
+    .header { background: linear-gradient(135deg, #7b2cbf, #9d4edd); color: white; padding: 30px 20px; text-align: center; border-bottom-left-radius: 20px; border-bottom-right-radius: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.15); }
+    .header h1 { font-size: 24px; margin-bottom: 5px; }
+    .header p { font-size: 14px; opacity: 0.9; }
+    .container { max-width: 450px; margin: -20px auto 30px; padding: 0 15px; }
+    .card { background: white; padding: 25px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); }
+    .form-group { margin-bottom: 18px; }
+    label { display: block; font-weight: 600; font-size: 14px; margin-bottom: 6px; color: #444; }
+    input, select { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 8px; font-size: 15px; transition: border-color 0.3s; }
+    input:focus, select:focus { border-color: #7b2cbf; outline: none; }
+    .btn { width: 100%; background: #7b2cbf; color: white; border: none; padding: 14px; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; transition: background 0.3s; margin-top: 10px; }
+    .btn:hover { background: #9d4edd; }
+    #statusMsg { margin-top: 15px; padding: 12px; border-radius: 8px; font-size: 14px; text-align: center; display: none; }
+    .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+    .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+  </style>
+
+  <!-- 🔔 OneSignal Web Push SDK (v16) -->
+  <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+  <script>
+    window.OneSignalDeferred = window.OneSignalDeferred || [];
+    OneSignalDeferred.push(async function(OneSignal) {
+      await OneSignal.init({
+        appId: "d2ced897-0702-4d42-a341-8c9e0821cc6f",
+        notifyButton: {
+          enable: true,             /* 👈 Bell Icon ऑन करण्यासाठी */
+          size: 'medium',           /* Small, Medium, किंवा Large */
+          theme: 'default',
+          position: 'bottom-right', /* स्क्रीनवर उजव्या कोपऱ्यात दिसेल */
+        },
+        allowLocalhostAsSecureOrigin: true,
       });
-    </script>
-    
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
-    <style>
-        :root {
-            --primary: #7b2cbf;       /* Vibrant Purple */
-            --primary-hover: #9d4edd; /* Light Purple */
-            --bg: #0a0a0c;            /* Rich Deep Black */
-            --card: #ffffff;          /* Pure White */
-            --text-dark: #1f1f23;     /* Dark Charcoal for text */
-            --text-muted: #75757a;    /* Muted Gray */
-        }
 
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-
-        body {
-            font-family: 'Poppins', sans-serif;
-            background-color: var(--bg);
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            position: relative;
-            overflow: hidden;
-            padding: 20px;
-        }
-
-        /* Dynamic Background Glow Elements */
-        body::before, body::after {
-            content: '';
-            position: absolute;
-            width: 300px;
-            height: 300px;
-            border-radius: 50%;
-            background: radial-gradient(circle, rgba(123, 44, 191, 0.4) 0%, rgba(0,0,0,0) 70%);
-            z-index: 1;
-            animation: floatGlow 8s infinite alternate ease-in-out;
-        }
-        body::before { top: -50px; left: -50px; }
-        body::after { bottom: -50px; right: -50px; animation-delay: 4s; }
-
-        @keyframes floatGlow {
-            0% { transform: translate(0, 0) scale(1); }
-            100% { transform: translate(30px, 20px) scale(1.2); }
-        }
-
-        .container {
-            background: var(--card);
-            padding: 2.5rem 2rem;
-            border-radius: 24px;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.05);
-            width: 100%;
-            max-width: 420px;
-            position: relative;
-            z-index: 10;
-            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        }
-
-        .container:hover {
-            transform: translateY(-5px);
-        }
-
-        .header-area {
-            text-align: center;
-            margin-bottom: 2rem;
-        }
-
-        h2 { 
-            color: var(--primary); 
-            font-size: 26px;
-            font-weight: 600;
-            letter-spacing: -0.5px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-        }
-
-        .subtitle {
-            font-size: 13px;
-            color: var(--text-muted);
-            margin-top: 4px;
-        }
-
-        .input-group {
-            position: relative;
-            margin-bottom: 16px;
-        }
-
-        input {
-            width: 100%;
-            padding: 14px 16px;
-            border: 2px solid #e1e1e6;
-            border-radius: 14px;
-            font-size: 14px;
-            font-family: inherit;
-            color: var(--text-dark);
-            background-color: #f8f9fa;
-            transition: all 0.3s ease;
-        }
-
-        input:focus {
-            border-color: var(--primary);
-            background-color: #fff;
-            box-shadow: 0 0 0 4px rgba(123, 44, 191, 0.15);
-            outline: none;
-        }
-
-        button {
-            width: 100%;
-            padding: 16px;
-            background-color: var(--primary);
-            color: white;
-            border: none;
-            border-radius: 14px;
-            font-size: 15px;
-            font-weight: 600;
-            cursor: pointer;
-            box-shadow: 0 4px 12px rgba(123, 44, 191, 0.3);
-            transition: all 0.2s ease;
-            margin-top: 8px;
-            position: relative;
-            overflow: hidden;
-        }
-
-        button:hover {
-            background-color: var(--primary-hover);
-            box-shadow: 0 6px 20px rgba(123, 44, 191, 0.4);
-        }
-
-        /* Premium Touch Animation Feedback */
-        button:active {
-            transform: scale(0.96);
-            box-shadow: 0 2px 8px rgba(123, 44, 191, 0.2);
-        }
-
-        #statusMessage {
-            text-align: center;
-            margin-top: 18px;
-            font-size: 13px;
-            font-weight: 500;
-            min-height: 20px;
-        }
-
-        /* Developer Branding Footer */
-        .developer-credit {
-            margin-top: 25px;
-            font-size: 11px;
-            color: rgba(255, 255, 255, 0.35);
-            letter-spacing: 1px;
-            text-transform: uppercase;
-            font-weight: 500;
-            z-index: 10;
-            transition: color 0.3s ease;
-            cursor: default;
-        }
-
-        .developer-credit span {
-            color: var(--primary);
-            font-weight: 600;
-        }
-
-        .developer-credit:hover {
-            color: rgba(255, 255, 255, 0.7);
-        }
-    </style>
+      // 🚀 युझरने अजून Allow केले नसेल, तर ऑटोमॅटिक Permission Prompt दाखवा
+      if (OneSignal.Notifications.permission !== "granted") {
+        await OneSignal.Notifications.requestPermission();
+      }
+    });
+  </script>
 </head>
 <body>
 
-<div class="container">
-    <div class="header-area">
-        <h2>BCA Portal 🎓</h2>
-        <div class="subtitle">Secure Lecture Alert Registration</div>
-    </div>
-    
-    <div class="input-group">
-        <input type="text" id="studentName" placeholder="Full Name" required>
-    </div>
-    <div class="input-group">
-        <input type="text" id="enrollNo" placeholder="Enrollment Number (GHRUA...)" required>
-    </div>
-    <div class="input-group">
-        <input type="text" id="semester" placeholder="Semester (e.g., 5)" required>
-    </div>
-    <div class="input-group">
-        <input type="tel" id="phoneNumber" placeholder="10-Digit Phone Number" required>
-    </div>
-    
-    <button onclick="registerStudent()">Register Now</button>
-    <p id="statusMessage"></p>
-</div>
+  <div class="header">
+    <h1>🎓 BCA Alert System</h1>
+    <p>Get Instant Timetable & Notice Alerts on Your Phone!</p>
+  </div>
 
-<!-- Developer Credit Line -->
-<div class="developer-credit">Developed by <span>Yash Kshirasagar</span></div>
+  <div class="container">
+    <div class="card">
+      <form id="subscribeForm">
+        <div class="form-group">
+          <label for="name">Full Name (पूर्ण नाव)</label>
+          <input type="text" id="name" placeholder="Enter your full name" required>
+        </div>
 
-<script>
-    async function registerStudent() {
-        const statusMsg = document.getElementById('statusMessage');
-        
-        const data = {
-            name: document.getElementById('studentName').value.trim(),
-            enroll_no: document.getElementById('enrollNo').value.trim(),
-            sem: document.getElementById('semester').value.trim(),
-            phone: document.getElementById('phoneNumber').value.trim()
-        };
+        <div class="form-group">
+          <label for="enroll_no">Enrollment Number (उदा. GHRUA25011140001)</label>
+          <input type="text" id="enroll_no" placeholder="GHRUA2501114..." required>
+        </div>
 
-        if (!data.name || !data.enroll_no || !data.sem || !data.phone) {
-            statusMsg.style.color = "#d90429";
-            statusMsg.innerText = "❌ Please fill all fields!";
-            return;
+        <div class="form-group">
+          <label for="sem">Semester (सेमिस्टर)</label>
+          <select id="sem" required>
+            <option value="">Select Semester</option>
+            <option value="Sem 1">Sem 1</option>
+            <option value="Sem 2">Sem 2</option>
+            <option value="Sem 3">Sem 3</option>
+            <option value="Sem 4">Sem 4</option>
+            <option value="Sem 5">Sem 5</option>
+            <option value="Sem 6">Sem 6</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="phone">Mobile Number (व्हॉट्सॲप / टेलिफोन)</label>
+          <input type="tel" id="phone" placeholder="10 Digit Mobile Number" required pattern="[0-9]{10}">
+        </div>
+
+        <button type="submit" class="btn">🚀 REGISTER FOR ALERTS</button>
+      </form>
+
+      <div id="statusMsg"></div>
+    </div>
+  </div>
+
+  <script>
+    // Registration Form JS
+    document.getElementById("subscribeForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const statusMsg = document.getElementById("statusMsg");
+      statusMsg.style.display = "none";
+
+      const name = document.getElementById("name").value.trim();
+      const enroll_no = document.getElementById("enroll_no").value.trim();
+      const sem = document.getElementById("sem").value;
+      const phone = document.getElementById("phone").value.trim();
+
+      try {
+        const res = await fetch("/api/subscribe", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name, enroll_no, sem, phone })
+        });
+
+        if (res.ok) {
+          statusMsg.className = "success";
+          statusMsg.innerText = "✅ रजिस्ट्रेशन यशस्वीरित्या पूर्ण झाले! तुम्हाला आता सर्व अलर्ट्स मिळतील.";
+          statusMsg.style.display = "block";
+          document.getElementById("subscribeForm").reset();
+        } else if (res.status === 409) {
+          statusMsg.className = "error";
+          statusMsg.innerText = "⚠️ तुम्ही आधीच रजिस्टर झालेले आहात!";
+          statusMsg.style.display = "block";
+        } else if (res.status === 403) {
+          statusMsg.className = "error";
+          statusMsg.innerText = "❌ अमान्य एनरोलमेंट नंबर!";
+          statusMsg.style.display = "block";
+        } else {
+          statusMsg.className = "error";
+          statusMsg.innerText = "❌ काहीतरी चुकीचे घडले, कृपया नंतर प्रयत्न करा.";
+          statusMsg.style.display = "block";
         }
-
-        statusMsg.style.color = "#3a86ff";
-        statusMsg.innerText = "Processing registration...";
-
-        try {
-            const response = await fetch('/api/subscribe', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data)
-            });
-
-            if (response.ok) {
-                statusMsg.style.color = "#38b000";
-                statusMsg.innerText = "🎉 Registration Successful!";
-                
-                // Clear inputs
-                document.getElementById('studentName').value = "";
-                document.getElementById('enrollNo').value = "";
-                document.getElementById('semester').value = "";
-                document.getElementById('phoneNumber').value = "";
-            } else if (response.status === 409) {
-                
-                statusMsg.style.color = "#ffb703";
-                statusMsg.innerText = "⚠️ You are already registered for alerts!";
-            } else if (response.status === 403) {
-                statusMsg.style.color = "#d90429";
-                statusMsg.innerText = "⚠️ Access Denied: Enrollment not in Whitelist!";
-            } else {
-                statusMsg.style.color = "#d90429";
-                statusMsg.innerText = "❌ Registration failed. Try again.";
-            }
-        } catch (e) {
-            statusMsg.style.color = "#d90429";
-            statusMsg.innerText = "❌ Connection error to server!";
-        }
-    }
-</script>
+      } catch (err) {
+        statusMsg.className = "error";
+        statusMsg.innerText = "❌ सर्व्हरशी संपर्क होऊ शकला नाही.";
+        statusMsg.style.display = "block";
+      }
+    });
+  </script>
 
 </body>
 </html>
