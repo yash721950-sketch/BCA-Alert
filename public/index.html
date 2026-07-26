@@ -1,146 +1,484 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>BCA Department Alert System</title>
-  
-  <!-- PWA Manifest & Theme Color -->
-  <link rel="manifest" href="/manifest.json">
-  <meta name="theme-color" content="#7b2cbf">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BCA Alert & Attendance System</title>
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Animate.css -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
+    
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
+    
+    <!-- GSAP -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
 
-  <!-- Style CSS -->
-  <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background: #f4f6f9; color: #333; line-height: 1.6; }
-    .header { background: linear-gradient(135deg, #7b2cbf, #9d4edd); color: white; padding: 30px 20px; text-align: center; border-bottom-left-radius: 20px; border-bottom-right-radius: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.15); }
-    .header h1 { font-size: 24px; margin-bottom: 5px; }
-    .header p { font-size: 14px; opacity: 0.9; }
-    .container { max-width: 450px; margin: -20px auto 30px; padding: 0 15px; }
-    .card { background: white; padding: 25px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); }
-    .form-group { margin-bottom: 18px; }
-    label { display: block; font-weight: 600; font-size: 14px; margin-bottom: 6px; color: #444; }
-    input, select { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 8px; font-size: 15px; transition: border-color 0.3s; }
-    input:focus, select:focus { border-color: #7b2cbf; outline: none; }
-    .btn { width: 100%; background: #7b2cbf; color: white; border: none; padding: 14px; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; transition: background 0.3s; margin-top: 10px; }
-    .btn:hover { background: #9d4edd; }
-    #statusMsg { margin-top: 15px; padding: 12px; border-radius: 8px; font-size: 14px; text-align: center; display: none; }
-    .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
-    .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
-  </style>
-
-  <!-- 🔔 OneSignal Web Push SDK (v16) -->
-  <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
-  <script>
-    window.OneSignalDeferred = window.OneSignalDeferred || [];
-    OneSignalDeferred.push(async function(OneSignal) {
-      await OneSignal.init({
-        appId: "d2ced897-0702-4d42-a341-8c9e0821cc6f",
-        notifyButton: {
-          enable: true,             /* Enable Bell Icon Floating Widget */
-          size: 'medium',           /* Size options: small, medium, large */
-          theme: 'default',
-          position: 'bottom-right', /* Position on the screen */
-        },
-        allowLocalhostAsSecureOrigin: true,
-      });
-
-      // Automatically trigger permission prompt if notifications are not granted yet
-      if (OneSignal.Notifications.permission !== "granted") {
-        await OneSignal.Notifications.requestPermission();
-      }
-    });
-  </script>
-</head>
-<body>
-
-  <div class="header">
-    <h1>🎓 BCA Alert System</h1>
-    <p>Get Instant Timetable & Notice Alerts on Your Phone!</p>
-  </div>
-
-  <div class="container">
-    <div class="card">
-      <form id="subscribeForm">
-        <div class="form-group">
-          <label for="name">Full Name</label>
-          <input type="text" id="name" placeholder="Enter your full name" required>
-        </div>
-
-        <div class="form-group">
-          <label for="enroll_no">Enrollment Number (e.g. GHRUA25011140001)</label>
-          <input type="text" id="enroll_no" placeholder="GHRUA2501114..." required>
-        </div>
-
-        <div class="form-group">
-          <label for="sem">Semester</label>
-          <select id="sem" required>
-            <option value="">Select Semester</option>
-            <option value="Sem 1">Sem 1</option>
-            <option value="Sem 2">Sem 2</option>
-            <option value="Sem 3">Sem 3</option>
-            <option value="Sem 4">Sem 4</option>
-            <option value="Sem 5">Sem 5</option>
-            <option value="Sem 6">Sem 6</option>
-          </select>
-        </div>
-
-        <div class="form-group">
-          <label for="phone">Mobile Number</label>
-          <input type="tel" id="phone" placeholder="10 Digit Mobile Number" required pattern="[0-9]{10}">
-        </div>
-
-        <button type="submit" class="btn">🚀 REGISTER FOR ALERTS</button>
-      </form>
-
-      <div id="statusMsg"></div>
-    </div>
-  </div>
-
-  <script>
-    // Registration Form JavaScript Handler
-    document.getElementById("subscribeForm").addEventListener("submit", async (e) => {
-      e.preventDefault();
-      const statusMsg = document.getElementById("statusMsg");
-      statusMsg.style.display = "none";
-
-      const name = document.getElementById("name").value.trim();
-      const enroll_no = document.getElementById("enroll_no").value.trim();
-      const sem = document.getElementById("sem").value;
-      const phone = document.getElementById("phone").value.trim();
-
-      try {
-        const res = await fetch("/api/subscribe", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ name, enroll_no, sem, phone })
-        });
-
-        if (res.ok) {
-          statusMsg.className = "success";
-          statusMsg.innerText = "✅ Registration successful! You will receive all departmental alerts.";
-          statusMsg.style.display = "block";
-          document.getElementById("subscribeForm").reset();
-        } else if (res.status === 409) {
-          statusMsg.className = "error";
-          statusMsg.innerText = "⚠️ You are already registered!";
-          statusMsg.style.display = "block";
-        } else if (res.status === 403) {
-          statusMsg.className = "error";
-          statusMsg.innerText = "❌ Invalid Enrollment Number!";
-          statusMsg.style.display = "block";
-        } else {
-          statusMsg.className = "error";
-          statusMsg.innerText = "❌ Something went wrong, please try again later.";
-          statusMsg.style.display = "block";
+    <!-- OneSignal Web Push SDK -->
+    <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
         }
-      } catch (err) {
-        statusMsg.className = "error";
-        statusMsg.innerText = "❌ Unable to connect to the server.";
-        statusMsg.style.display = "block";
-      }
-    });
-  </script>
 
-</body>
-</html>
+        :root {
+            --primary-violet: #7b2cbf;
+            --electric-blue: #0099ff;
+            --glowing-green: #00ff88;
+            --dark-bg: #0a0e27;
+            --glass-light: rgba(255, 255, 255, 0.1);
+            --glass-border: rgba(255, 255, 255, 0.2);
+        }
+
+        body {
+            background: linear-gradient(135deg, var(--dark-bg) 0%, #1a0033 50%, #0d0a1a 100%);
+            color: #e0e0e0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow-x: hidden;
+            min-height: 100vh;
+        }
+
+        /* ============================================
+           ANIMATED FLOATING BACKGROUND ORBS
+           ============================================ */
+        .background-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+            overflow: hidden;
+            pointer-events: none;
+        }
+
+        .orb {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(80px);
+            opacity: 0.3;
+            mix-blend-mode: screen;
+        }
+
+        .orb-1 {
+            width: 300px;
+            height: 300px;
+            background: radial-gradient(circle, var(--primary-violet), transparent);
+            top: -100px;
+            left: -100px;
+            animation: float-orb-1 20s ease-in-out infinite;
+        }
+
+        .orb-2 {
+            width: 400px;
+            height: 400px;
+            background: radial-gradient(circle, var(--electric-blue), transparent);
+            bottom: -150px;
+            right: -100px;
+            animation: float-orb-2 25s ease-in-out infinite;
+        }
+
+        .orb-3 {
+            width: 250px;
+            height: 250px;
+            background: radial-gradient(circle, var(--glowing-green), transparent);
+            top: 50%;
+            right: 10%;
+            animation: float-orb-3 22s ease-in-out infinite;
+        }
+
+        @keyframes float-orb-1 {
+            0%, 100% { transform: translate(0, 0); }
+            25% { transform: translate(50px, 50px); }
+            50% { transform: translate(100px, 0); }
+            75% { transform: translate(50px, -50px); }
+        }
+
+        @keyframes float-orb-2 {
+            0%, 100% { transform: translate(0, 0); }
+            25% { transform: translate(-50px, -50px); }
+            50% { transform: translate(-100px, 0); }
+            75% { transform: translate(-50px, 50px); }
+        }
+
+        @keyframes float-orb-3 {
+            0%, 100% { transform: translate(0, 0) rotate(0deg); }
+            50% { transform: translate(-80px, 80px) rotate(180deg); }
+        }
+
+        /* 🕺 FLOATING ANIMATED STUDENT AVATAR */
+        .avatar-bounce {
+            animation: floatStudent 3.5s infinite ease-in-out;
+        }
+        @keyframes floatStudent {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-12px) rotate(1.5deg); }
+        }
+
+        /* ============================================
+           GLASSMORPHISM CARD STYLES
+           ============================================ */
+        .glass-card {
+            background: rgba(20, 20, 40, 0.7);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .glass-card:hover {
+            background: rgba(20, 20, 40, 0.85);
+            border-color: rgba(255, 255, 255, 0.3);
+            box-shadow: 0 12px 48px rgba(123, 44, 191, 0.2);
+        }
+
+        /* ============================================
+           NEON GLOW EFFECTS
+           ============================================ */
+        .neon-glow {
+            text-shadow: 0 0 10px var(--glowing-green),
+                         0 0 20px var(--glowing-green),
+                         0 0 30px var(--electric-blue);
+        }
+
+        /* ============================================
+           INPUT FIELD ANIMATIONS
+           ============================================ */
+        .input-field {
+            background: rgba(255, 255, 255, 0.05);
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 12px 16px;
+            color: #e0e0e0;
+            font-size: 14px;
+            width: 100%;
+            transition: all 0.3s ease;
+        }
+
+        .input-field:focus {
+            outline: none;
+            background: rgba(255, 255, 255, 0.08);
+            border-color: var(--electric-blue);
+            box-shadow: 0 0 20px rgba(0, 153, 255, 0.4),
+                       inset 0 0 10px rgba(0, 153, 255, 0.1);
+        }
+
+        .input-label {
+            display: block;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: rgba(224, 224, 224, 0.7);
+            margin-bottom: 8px;
+        }
+
+        /* ============================================
+           BUTTON ANIMATIONS
+           ============================================ */
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary-violet), var(--electric-blue));
+            color: white;
+            border: none;
+            border-radius: 12px;
+            padding: 12px 24px;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            width: 100%;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            box-shadow: 0 0 20px rgba(123, 44, 191, 0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 0 30px rgba(123, 44, 191, 0.6),
+                       0 0 60px rgba(0, 153, 255, 0.3);
+        }
+
+        /* ============================================
+           ACTION BUTTON ANIMATIONS
+           ============================================ */
+        .btn-action {
+            border: none;
+            border-radius: 12px;
+            padding: 12px 20px;
+            font-weight: 600;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            width: 100%;
+        }
+
+        .btn-present {
+            background: linear-gradient(135deg, var(--glowing-green), #00cc66);
+            color: #000;
+            box-shadow: 0 0 20px rgba(0, 255, 136, 0.4);
+        }
+
+        .btn-present:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 0 30px rgba(0, 255, 136, 0.6);
+        }
+
+        .btn-absent {
+            background: linear-gradient(135deg, #ff3333, #cc0000);
+            color: white;
+            box-shadow: 0 0 20px rgba(255, 51, 51, 0.4);
+        }
+
+        .btn-absent:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 0 30px rgba(255, 51, 51, 0.6);
+        }
+
+        .action-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-top: 15px;
+        }
+
+        /* ============================================
+           ICON & BADGE ANIMATIONS
+           ============================================ */
+        .icon-bell {
+            font-size: 22px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            animation: swing 2s ease-in-out infinite;
+        }
+
+        @keyframes swing {
+            0%, 100% { transform: rotate(0deg); }
+            25% { transform: rotate(-15deg); }
+            75% { transform: rotate(15deg); }
+        }
+
+        .form-container {
+            width: 100%;
+            max-width: 420px;
+            z-index: 10;
+        }
+    </style>
+</head>
+<body class="flex items-center justify-center min-h-screen p-4 relative">
+
+    <!-- FLOATING BACKGROUND ORBS -->
+    <div class="background-container">
+        <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
+        <div class="orb orb-3"></div>
+    </div>
+
+    <!-- MAIN APP CONTAINER -->
+    <div class="form-container">
+
+        <!-- TOP BAR -->
+        <div class="flex justify-between items-center mb-6 px-2 relative z-10">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-purple-600/30 border border-purple-400/40 flex items-center justify-center font-bold text-xl text-purple-300">
+                    🎓
+                </div>
+                <div>
+                    <h1 class="font-bold text-lg leading-tight text-white">BCA Alert System</h1>
+                    <p class="text-xs text-purple-300/80">G H Raisoni University</p>
+                </div>
+            </div>
+            <div class="relative">
+                <i class="fa-solid fa-bell icon-bell text-purple-300"></i>
+                <span class="absolute -top-1 -right-1 w-2.5 h-2.5 bg-emerald-400 rounded-full"></span>
+            </div>
+        </div>
+
+        <!-- 1️⃣ SCREEN 1: LOGIN FORM WITH CUSTOM RAISONI STUDENT AVATAR -->
+        <div id="loginCard" class="glass-card p-6 animate__animated animate__fadeInUp">
+            
+            <!-- 🎨 CUSTOM 3D ANIMATED RAISONI STUDENT AVATAR -->
+            <div class="flex justify-center mb-3">
+                <div class="avatar-bounce">
+                    <svg class="w-28 h-28 drop-shadow-[0_10px_20px_rgba(123,44,191,0.5)]" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="100" cy="100" r="85" fill="url(#avatarGlow)" fill-opacity="0.25"/>
+                        <!-- Head & Hair -->
+                        <path d="M100 40C83 40 70 53 70 70C70 82 78 92 88 97V105H112V97C122 92 130 82 130 70C130 53 117 40 100 40Z" fill="#F3D0B5"/>
+                        <path d="M100 35C80 35 68 48 68 65C72 65 78 58 88 58C98 58 102 52 108 52C118 52 122 62 132 62C132 45 120 35 100 35Z" fill="#2D213F"/>
+                        
+                        <!-- Face Eyes & Smile -->
+                        <circle cx="88" cy="72" r="3" fill="#2D213F"/>
+                        <circle cx="112" cy="72" r="3" fill="#2D213F"/>
+                        <path d="M94 83C94 83 97 87 100 87C103 87 106 83 106 83" stroke="#2D213F" stroke-width="2.5" stroke-linecap="round"/>
+
+                        <!-- White T-Shirt Body -->
+                        <path d="M60 120C60 110 75 105 100 105C125 105 140 110 140 120L148 180H52L60 120Z" fill="#FFFFFF"/>
+                        <path d="M88 105L100 115L112 105" stroke="#7b2cbf" stroke-width="3" stroke-linecap="round"/>
+
+                        <!-- 👕 "Raisoni Education" Chest Logo in Purple -->
+                        <rect x="70" y="132" width="60" height="18" rx="4" fill="#F3E8FF" opacity="0.95"/>
+                        <text x="100" y="141" fill="#7b2cbf" font-size="6.5" font-family="sans-serif" font-weight="900" text-anchor="middle">RAISONI</text>
+                        <text x="100" y="147" fill="#5c1d91" font-size="4.5" font-family="sans-serif" font-weight="700" text-anchor="middle">EDUCATION</text>
+
+                        <!-- Backpack Straps -->
+                        <path d="M68 115L62 160" stroke="#0099ff" stroke-width="5" stroke-linecap="round"/>
+                        <path d="M132 115L138 160" stroke="#0099ff" stroke-width="5" stroke-linecap="round"/>
+
+                        <defs>
+                            <radialGradient id="avatarGlow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(100 100) scale(85)">
+                                <stop stop-color="#9D4EDD"/>
+                                <stop offset="1" stop-color="#7B2CBF" stop-opacity="0"/>
+                            </radialGradient>
+                        </defs>
+                    </svg>
+                </div>
+            </div>
+
+            <div class="text-center mb-6">
+                <h2 class="text-2xl font-bold text-white tracking-wide">Student Login</h2>
+                <p class="text-xs text-gray-400 mt-1">Access Live Timetable & Attendance</p>
+            </div>
+
+            <form onsubmit="handleLogin(event)" class="space-y-4">
+                <div>
+                    <label class="input-label">Enrollment Number</label>
+                    <input type="text" id="loginEnroll" placeholder="e.g. GHRUA25011140001" required class="input-field" />
+                </div>
+
+                <div>
+                    <label class="input-label">Mobile Number</label>
+                    <input type="tel" id="loginPhone" placeholder="10-digit Mobile Number" required class="input-field" />
+                </div>
+
+                <button type="submit" class="btn-primary mt-2">
+                    <span>Sign In Dashboard</span>
+                    <i class="fa-solid fa-arrow-right text-xs"></i>
+                </button>
+            </form>
+
+            <div class="mt-6 text-center">
+                <p class="text-xs text-gray-400">New Student? 
+                    <span class="text-cyan-400 font-semibold cursor-pointer underline hover:text-cyan-300" onclick="toggleAuth('register')">Register First</span>
+                </p>
+            </div>
+        </div>
+
+        <!-- 2️⃣ SCREEN 2: REGISTRATION FORM -->
+        <div id="registerCard" class="glass-card p-6 hidden animate__animated animate__fadeInUp">
+            <div class="text-center mb-6">
+                <h2 class="text-2xl font-bold text-white tracking-wide">Student Register</h2>
+                <p class="text-xs text-gray-400 mt-1">Register for Automatic Lecture Push Alerts</p>
+            </div>
+
+            <form onsubmit="handleRegister(event)" class="space-y-3">
+                <div>
+                    <label class="input-label">Full Name</label>
+                    <input type="text" id="regName" placeholder="e.g. Yash Deshmukh" required class="input-field" />
+                </div>
+
+                <div>
+                    <label class="input-label">Enrollment Number</label>
+                    <input type="text" id="regEnroll" placeholder="GHRUA2501114XXXX" required class="input-field" />
+                </div>
+
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="input-label">Mobile No</label>
+                        <input type="tel" id="regPhone" placeholder="10 Digits" required class="input-field" />
+                    </div>
+                    <div>
+                        <label class="input-label">Semester</label>
+                        <select id="regSem" required class="input-field bg-slate-800">
+                            <option value="SEM 1">SEM 1</option>
+                            <option value="SEM 2">SEM 2</option>
+                            <option value="SEM 3">SEM 3</option>
+                            <option value="SEM 4">SEM 4</option>
+                        </select>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn-primary mt-2" style="background: linear-gradient(135deg, #00cc66, #0099ff);">
+                    <span>Complete Registration 🚀</span>
+                </button>
+            </form>
+
+            <div class="mt-4 text-center">
+                <p class="text-xs text-gray-400">Already Registered? 
+                    <span class="text-cyan-400 font-semibold cursor-pointer underline" onclick="toggleAuth('login')">Sign In Here</span>
+                </p>
+            </div>
+        </div>
+
+        <!-- 3️⃣ SCREEN 3: LIVE DASHBOARD & ATTENDANCE -->
+        <div id="dashboardCard" class="glass-card p-6 hidden animate__animated animate__fadeIn">
+            <div class="flex items-center justify-between border-b border-white/10 pb-4 mb-4">
+                <div>
+                    <span class="text-[10px] bg-purple-500/30 text-purple-300 font-semibold px-2.5 py-0.5 rounded-full border border-purple-400/30" id="dashSem">SEM 2</span>
+                    <h3 class="text-lg font-bold text-white mt-1" id="dashName">Student Name</h3>
+                    <p class="text-xs text-gray-400 font-mono" id="dashEnroll">GHRUA25011140000</p>
+                </div>
+                <button onclick="logout()" class="text-xs text-rose-400 hover:text-rose-300 bg-rose-500/10 px-3 py-2 rounded-xl border border-rose-500/20">
+                    <i class="fa-solid fa-right-from-bracket"></i> Exit
+                </button>
+            </div>
+
+            <!-- Live Lecture Card -->
+            <div class="bg-gradient-to-br from-purple-900/40 to-blue-900/40 rounded-2xl p-4 border border-purple-500/30 mb-4">
+                <div class="flex justify-between items-center mb-2">
+                    <span class="text-xs font-bold text-emerald-400 flex items-center gap-1.5">
+                        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span> LIVE LECTURE
+                    </span>
+                    <span class="text-xs text-gray-300" id="dashTime">12:45 PM</span>
+                </div>
+
+                <h4 class="text-base font-bold text-white mb-1" id="dashSubject">Computer Graphics</h4>
+                <p class="text-xs text-gray-300"><i class="fa-solid fa-user-tie text-purple-300 mr-1"></i> <span id="dashTeacher">Prof. Anuj S. Deshmukh</span></p>
+
+                <!-- Action Buttons -->
+                <div id="attendanceActionArea" class="mt-4 pt-3 border-t border-white/10">
+                    <p class="text-xs text-center text-gray-300 mb-3">Are you physically present in class?</p>
+                    <div class="action-buttons">
+                        <button onclick="markAttendance('YES')" class="btn-action btn-present">
+                            <i class="fa-solid fa-circle-check"></i> YES (PRESENT)
+                        </button>
+                        <button onclick="markAttendance('NO')" class="btn-action btn-absent">
+                            <i class="fa-solid fa-circle-xmark"></i> NO (ABSENT)
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Status Result Display -->
+            <div id="statusResultCard" class="bg-white/5 rounded-2xl p-4 text-center border border-white/10">
+                <p class="text-xs text-gray-400 mb-1">Today's Attendance Status</p>
+                <p id="statusText" class="text-sm font-bold text-gray-300">Pending Selection...</p>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- JAVASCRIPT LOGIC -->
+    <script>
+        let currentStudent = null;
+
+        function toggleAuth(type) {
+            const loginCard = document.getElementById('loginCard');
+            const reg
