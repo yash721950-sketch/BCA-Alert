@@ -4,8 +4,29 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BCA Alerts | Secure Portal</title>
+    
+    <!-- 📲 PWA Manifest & Theme Settings -->
     <link rel="manifest" href="/manifest.json">
-<meta name="theme-color" content="#075e54">
+    <meta name="theme-color" content="#7b2cbf">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="BCA Alerts">
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/2643/2643509.png">
+
+    <!-- 🔔 OneSignal Push Notifications SDK Integration -->
+    <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+    <script>
+      window.OneSignalDeferred = window.OneSignalDeferred || [];
+      OneSignalDeferred.push(async function(OneSignal) {
+        await OneSignal.init({
+          appId: "d2ced897-0702-4d42-a341-8c9e0821cc6f",
+          safari_web_id: "web.onesignal.auto.44737891-769a-4856-a052-0f3c94719003",
+          notifyButton: {
+            enable: true,
+          },
+        });
+      });
+    </script>
     
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
     <style>
@@ -234,7 +255,7 @@
 
             if (response.ok) {
                 statusMsg.style.color = "#38b000";
-                statusMsg.innerText = "🎉 Registration Successful! SMS Sent.";
+                statusMsg.innerText = "🎉 Registration Successful!";
                 
                 // Clear inputs
                 document.getElementById('studentName').value = "";
