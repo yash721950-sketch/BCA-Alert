@@ -13,12 +13,9 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, "public")));
 
-// 🔑 माझे Meta Official API Credentials
-const PHONE_NUMBER_ID = "1225234990674644"; 
-const ACCESS_TOKEN = "EAAdxAucVo1cBSOHcZAviCNfO5NV4EGJtmsAbx6c6rsDmRZCmy2JpHyUN7liicDB05VXQNrmmJdn7X3CDBNEKUSF3vFAVBY076SrLpNhtfQ9HgbOhfMbtz8vTQWZB3qRt6WPF5pMOZAZChevdzbEVGyU6kFTVWNUiS18bZBMkhHfC055wx8R2ywG2FOtYC7XgZDZD"; 
-
-// 🔐 Meta Webhook Verify Token
-const VERIFY_TOKEN = "bcaalerts123"; 
+// 🔔 OneSignal Push Notification Credentials
+const ONESIGNAL_APP_ID = "d2ced897-0702-4d42-a341-8c9e0821cc6f";
+const ONESIGNAL_REST_API_KEY = "os_v2_app_2lhnrfyhajgufi2brspaqiomn65p373h5whedzvhibo72oacskcszreih7bt3y6rdafxv6aqsm74xmv2qopyagmnx2774s7w5zfkq3i";
 
 // 🛢️ MySQL डेटाबेस कनेक्शन (Aiven Cloud)
 const dbConfig = {
@@ -70,71 +67,37 @@ function setupTables() {
 app.get("/status", (req, res) => {
   res.send(`
     <div style="text-align: center; margin-top: 50px; font-family: Arial, sans-serif;">
-      <h2 style="color: green;">✅ Meta Official WhatsApp API Active!</h2>
-      <p>बॉट कसल्याही एररशिवाय १००% ऑटोमॅटिक बॅकग्राउंडला चालू आहे भावा! 😎</p>
+      <h2 style="color: #7b2cbf;">✅ OneSignal PWA Push Alert System Active!</h2>
+      <p>ॲप पूर्णपणे बॅकग्राउंडला चालू आहे भावा! 😎</p>
     </div>
   `);
 });
 
-// 🔗 Meta Webhook Verification
-app.get("/webhook", (req, res) => {
-  const mode = req.query["hub.mode"];
-  const token = req.query["hub.verify_token"];
-  const challenge = req.query["hub.challenge"];
-
-  if (mode && token) {
-    if (mode === "subscribe" && token === VERIFY_TOKEN) {
-      console.log("✅ Webhook Verified Successfully!");
-      res.status(200).send(challenge);
-    } else {
-      console.error("❌ Verification failed. Token mismatch!");
-      res.sendStatus(403);
-    }
-  } else {
-    res.sendStatus(400);
-  }
-});
-
-app.post("/webhook", (req, res) => {
-  res.status(200).send("EVENT_RECEIVED");
-});
-
-// 📩 Meta API द्वारे थेट टेक्स्ट मेसेज पाठवण्याचे फंक्शन (विना टेंप्लेट)
-async function sendWhatsAppAlert(phoneNumber, messageText) {
-  let cleanPhone = phoneNumber.replace(/[^0-9]/g, "");
-  if (cleanPhone.length === 10) cleanPhone = "91" + cleanPhone;
-
-  const url = `https://graph.facebook.com/v18.0/${PHONE_NUMBER_ID}/messages`;
-
-  const payload = {
-    messaging_product: "whatsapp",
-    to: cleanPhone,
-    type: "text",
-    text: { body: messageText }
-  };
-
+// 🔔 OneSignal द्वारे सर्व मोबाईलवर (Android/iPhone) डायरेक्ट पुश नोटिफिकेशन पाठवण्याचे मुख्य फंक्शन
+async function sendOneSignalNotification(title, messageText) {
   try {
-    const response = await fetch(url, {
+    const response = await fetch("https://onesignal.com/api/v1/notifications", {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${ACCESS_TOKEN}`,
-        "Content-Type": "application/json"
+        "Content-Type": "application/json; charset=utf-8",
+        "Authorization": `Basic ${ONESIGNAL_REST_API_KEY}`
       },
-      body: JSON.stringify(payload)
+      body: JSON.stringify({
+        app_id: ONESIGNAL_APP_ID,
+        included_segments: ["All"], // सर्व युझर्सना नोटिफिकेशन जाईल
+        headings: { en: title || "📢 BCA Department Alert" },
+        contents: { en: messageText }
+      })
     });
 
     const data = await response.json();
-    if (data.messages) {
-      console.log(`📩 थेट टेक्स्ट मेसेज ${cleanPhone} ला यशस्वीरित्या पाठवला!`);
-    } else {
-      console.error(`❌ Meta Send Error:`, JSON.stringify(data, null, 2));
-    }
+    console.log("✅ Push Notification Broadcast Result:", data);
   } catch (err) {
-    console.error(`❌ Fetch Request Error:`, err.message);
+    console.error("❌ OneSignal Push Error:", err.message);
   }
 }
 
-// 📲 ADMIN PANEL UI (फक्त १ मोठा मेसेज बॉक्स)
+// 📲 ADMIN PANEL UI
 app.get("/admin", (req, res) => {
   res.send(`
     <!DOCTYPE html>
@@ -145,21 +108,21 @@ app.get("/admin", (req, res) => {
       <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0f2f5; padding: 20px; margin: 0; }
         .card { max-width: 500px; margin: 20px auto; background: #fff; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
-        h2 { text-align: center; color: #075e54; margin-bottom: 20px; }
+        h2 { text-align: center; color: #7b2cbf; margin-bottom: 20px; }
         label { font-weight: bold; display: block; margin-top: 12px; color: #333; }
         textarea { width: 100%; height: 150px; padding: 12px; margin-top: 8px; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box; font-size: 15px; resize: vertical; }
-        button { width: 100%; background: #25d366; color: white; border: none; padding: 14px; font-size: 16px; font-weight: bold; border-radius: 8px; margin-top: 20px; cursor: pointer; }
-        button:hover { background: #128c7e; }
+        button { width: 100%; background: #7b2cbf; color: white; border: none; padding: 14px; font-size: 16px; font-weight: bold; border-radius: 8px; margin-top: 20px; cursor: pointer; }
+        button:hover { background: #9d4edd; }
       </style>
     </head>
     <body>
       <div class="card">
-        <h2>📢 Send Custom Notice</h2>
+        <h2>📢 Send Push Notification Notice</h2>
         <form action="/admin/send" method="POST">
           <label>Type Your Message Here:</label>
           <textarea name="full_message" placeholder="📢 NOTICE: Type your custom message here..." required></textarea>
 
-          <button type="submit">🚀 SEND DIRECT WHATSAPP MESSAGE</button>
+          <button type="submit">🚀 BROADCAST PUSH NOTIFICATION</button>
         </form>
       </div>
     </body>
@@ -167,29 +130,22 @@ app.get("/admin", (req, res) => {
   `);
 });
 
-// 🚀 ADMIN POST API
-app.post("/admin/send", (req, res) => {
+// 🚀 ADMIN POST API (फक्त PWA Push Notification जाईल)
+app.post("/admin/send", async (req, res) => {
   const { full_message } = req.body;
 
   if (!full_message) return res.send("❌ मेसेज टेक्स्ट रिकामे असू शकत नाही.");
 
-  db.query("SELECT phone FROM bca_students", (err, results) => {
-    if (err || results.length === 0) {
-      return res.send("<h2 style='color:red;'>❌ सिस्टीममध्ये कोणतेही विद्यार्थी रजिस्टर नाहीत किंवा DB एरर.</h2>");
-    }
-    
-    results.forEach(row => {
-      sendWhatsAppAlert(row.phone, full_message);
-    });
-    
-    res.send(`
-      <div style="text-align:center; padding:40px; font-family:sans-serif;">
-        <h2 style="color:green;">✅ Direct Message Sent Successfully!</h2>
-        <p style="background:#e1f5fe; padding:15px; border-radius:8px; display:inline-block; max-width:80%;"><b>Message:</b><br>${full_message}</p><br>
-        <a href="/admin" style="display:inline-block; margin-top:15px; padding:10px 20px; background:#075e54; color:white; text-decoration:none; border-radius:5px;">← बॅक जा</a>
-      </div>
-    `);
-  });
+  // PWA Push Notification ब्रॉडकास्ट करा
+  await sendOneSignalNotification("📢 BCA Department Notice", full_message);
+
+  res.send(`
+    <div style="text-align:center; padding:40px; font-family:sans-serif;">
+      <h2 style="color:green;">✅ Push Notification Sent Successfully!</h2>
+      <p style="background:#e1f5fe; padding:15px; border-radius:8px; display:inline-block; max-width:80%;"><b>Message:</b><br>${full_message}</p><br>
+      <a href="/admin" style="display:inline-block; margin-top:15px; padding:10px 20px; background:#7b2cbf; color:white; text-decoration:none; border-radius:5px;">← बॅक जा</a>
+    </div>
+  `);
 });
 
 // 🌐 Student Registration API
@@ -218,8 +174,6 @@ app.post("/api/subscribe", (req, res) => {
       const sql = "INSERT INTO bca_students (phone, name, enroll_no, sem) VALUES (?, ?, ?, ?)";
       db.query(sql, [cleanPhone, name, studentEnroll, sem], (err) => {
         if (err) return res.status(500).send("Database Error.");
-        
-        sendWhatsAppAlert(cleanPhone, "Registration Successful for BCA Alert System!");
         res.sendStatus(200);
       });
     });
@@ -228,7 +182,7 @@ app.post("/api/subscribe", (req, res) => {
   }
 });
 
-// ⏰ Timetable and Cron Job
+// ⏰ Timetable and Cron Job (फक्त PWA Push Notification)
 let sentAlertsLog = {}; 
 const timetable = {
   MON: [
@@ -285,12 +239,7 @@ cron.schedule("* * * * *", () => {
     if (currentTimeStr === "11:10") {
       const holidayKey = `${currentDay}-holiday-1110`;
       if (!sentAlertsLog[holidayKey]) {
-        db.query("SELECT phone FROM bca_students", (err, results) => {
-          if (err || results.length === 0) return;
-          results.forEach(row => {
-            sendWhatsAppAlert(row.phone, "Weekend Holiday: No Classes Today. Enjoy your weekend!");
-          });
-        });
+        sendOneSignalNotification("🌴 Weekend Notice", "Weekend Holiday: No Classes Today. Enjoy your weekend!");
         sentAlertsLog[holidayKey] = true;
       }
     }
@@ -309,12 +258,8 @@ cron.schedule("* * * * *", () => {
   if (upcomingLecture) {
     const alertKey = `${currentDay}-${upcomingLecture.start}`;
     if (!sentAlertsLog[alertKey]) {
-      db.query("SELECT phone FROM bca_students", (err, results) => {
-        if (err || results.length === 0) return;
-        results.forEach(row => {
-          sendWhatsAppAlert(row.phone, `📢 Lecture Alert: ${upcomingLecture.subject} is scheduled at ${upcomingLecture.start} with ${upcomingLecture.teacher}.`);
-        });
-      });
+      const lectureMsg = `📢 Lecture Alert: ${upcomingLecture.subject} is scheduled at ${upcomingLecture.start} with ${upcomingLecture.teacher}.`;
+      sendOneSignalNotification("📚 Lecture Alert", lectureMsg);
       sentAlertsLog[alertKey] = true;
     }
   }
@@ -324,4 +269,4 @@ cron.schedule("* * * * *", () => {
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Meta Official Server online at port ${PORT}`));
+app.listen(PORT, () => console.log(`🚀 OneSignal PWA Push Server online at port ${PORT}`));
