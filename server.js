@@ -20,7 +20,7 @@ const ONESIGNAL_REST_API_KEY = process.env.ONESIGNAL_REST_API_KEY;
 // 📍 COLLEGE GPS COORDINATES (G H Raisoni University, Amravati City Office)
 const COLLEGE_LAT = 20.9320; 
 const COLLEGE_LNG = 77.7516; 
-const MAX_ALLOWED_DISTANCE_METERS = 150; // १५० मीटरचा परिसर (कॅम्पस क्षेत्र)
+const MAX_ALLOWED_DISTANCE_METERS = 150; 
 
 // 📞 Teachers Contact Database (10 Digit Indian Numbers)
 let teachersMap = {
@@ -32,8 +32,8 @@ let teachersMap = {
   "Dr. Shailesh R. Thakare": "9922625194",
   "Prof. Pranav A. Dhabarde": "7020030615",
   "Dr. Amar More": "9423621602",
-  "Prof. Ashwini Rathi": "",  // Admin Panel वरून कधीही ॲड करता येईल
-  "Sachin J. Deshpande": ""   // Admin Panel वरून कधीही ॲड करता येईल
+  "Prof. Ashwini Rathi": "",  
+  "Sachin J. Deshpande": ""   
 };
 
 // 🛢️ MySQL डेटाबेस कनेक्शन (Aiven Cloud)
@@ -100,7 +100,7 @@ function setupTables() {
 
 // 📏 Haversine Formula (GPS Distance Calculator in Meters)
 function getDistanceFromLatLonInMeters(lat1, lon1, lat2, lon2) {
-  const R = 6371e3; // Earth radius in meters
+  const R = 6371e3; 
   const dLat = (lat2 - lat1) * Math.PI / 180;
   const dLon = (lon2 - lon1) * Math.PI / 180;
   const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
@@ -143,7 +143,6 @@ app.post("/api/attendance/mark", (req, res) => {
 
   if (!enroll_no || !subject) return res.status(400).json({ error: "Missing required details." });
 
-  // 1️⃣ Verify GPS Geofencing for YES (PRESENT)
   if (status === "YES") {
     if (!userLat || !userLng) {
       return res.status(400).json({ error: "Location permission required to mark attendance!" });
@@ -172,7 +171,7 @@ app.get("/api/admin/attendance", (req, res) => {
   });
 });
 
-// 👑 Admin API: Remove Fake Attendance
+// 👑 Admin API: Delete Attendance
 app.post("/api/admin/attendance/delete", (req, res) => {
   const { id } = req.body;
   const sql = "DELETE FROM lecture_attendance WHERE id = ?";
@@ -182,7 +181,7 @@ app.post("/api/admin/attendance/delete", (req, res) => {
   });
 });
 
-// 📲 Admin API: Direct WhatsApp Attendance Report Link
+// 📲 Admin API: WhatsApp Attendance Report Link
 app.get("/api/admin/whatsapp-link", (req, res) => {
   const { teacher, subject } = req.query;
   let rawPhone = teachersMap[teacher];
@@ -239,7 +238,7 @@ app.post("/api/admin/update-teacher", (req, res) => {
   }
 });
 
-// 🔔 OneSignal Interactive Push Notification Function
+// 🔔 OneSignal Push Notification Function
 async function sendOneSignalNotification(title, messageText, subject = "", teacher = "") {
   if (!ONESIGNAL_REST_API_KEY) {
     console.error("❌ Error: ONESIGNAL_REST_API_KEY is missing!");
@@ -275,81 +274,6 @@ async function sendOneSignalNotification(title, messageText, subject = "", teach
   }
 }
 
-// 📲 ADMIN PANEL UI
-app.get("/admin", (req, res) => {
-  res.send(`
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <title>BCA Notice & Attendance Admin</title>
-      <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0f2f5; padding: 15px; margin: 0; }
-        .card { max-width: 600px; margin: 15px auto; background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
-        h2, h3 { text-align: center; color: #7b2cbf; margin-bottom: 15px; }
-        label { font-weight: bold; display: block; margin-top: 10px; color: #333; }
-        textarea, input { width: 100%; padding: 10px; margin-top: 5px; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box; font-size: 14px; }
-        textarea { height: 100px; resize: vertical; }
-        button { width: 100%; background: #7b2cbf; color: white; border: none; padding: 12px; font-size: 15px; font-weight: bold; border-radius: 8px; margin-top: 15px; cursor: pointer; }
-        button:hover { background: #9d4edd; }
-        .whatsapp-btn { background: #25D366 !important; }
-        .whatsapp-btn:hover { background: #128C7E !important; }
-      </style>
-    </head>
-    <body>
-      <div class="card">
-        <h2>📢 Broadcast Notice / Custom Push</h2>
-        <form action="/admin/send" method="POST">
-          <label>Message:</label>
-          <textarea name="full_message" placeholder="📢 Type custom message..." required></textarea>
-          <button type="submit">🚀 BROADCAST PUSH NOTIFICATION</button>
-        </form>
-      </div>
-
-      <div class="card">
-        <h3>✏️ Update Teacher Phone Number</h3>
-        <form id="updateTeacherForm">
-          <label>Teacher Name:</label>
-          <input type="text" id="teacherName" placeholder="e.g. Prof. Ashwini Rathi" required />
-          <label>10-Digit Mobile Number:</label>
-          <input type="tel" id="teacherPhone" placeholder="e.g. 9876543210" required />
-          <button type="button" onclick="updateTeacher()">💾 Save Teacher Number</button>
-        </form>
-      </div>
-
-      <script>
-        async function updateTeacher() {
-          const name = document.getElementById('teacherName').value;
-          const phone = document.getElementById('teacherPhone').value;
-          const res = await fetch('/api/admin/update-teacher', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ teacherName: name, phone: phone })
-          });
-          const data = await res.json();
-          alert(data.message || data.error);
-        }
-      </script>
-    </body>
-    </html>
-  `);
-});
-
-app.post("/admin/send", async (req, res) => {
-  const { full_message } = req.body;
-  if (!full_message) return res.send("❌ मेसेज टेक्स्ट रिकामे असू शकत नाही.");
-
-  await sendOneSignalNotification("📢 BCA Department Notice", full_message);
-
-  res.send(`
-    <div style="text-align:center; padding:40px; font-family:sans-serif;">
-      <h2 style="color:green;">✅ Push Notification Sent Successfully!</h2>
-      <p style="background:#e1f5fe; padding:15px; border-radius:8px; display:inline-block; max-width:80%;"><b>Message:</b><br>${full_message}</p><br>
-      <a href="/admin" style="display:inline-block; margin-top:15px; padding:10px 20px; background:#7b2cbf; color:white; text-decoration:none; border-radius:5px;">← बॅक जा</a>
-    </div>
-  `);
-});
-
 // 🌐 Student Registration API
 const allowedEnrollments = [];
 for (let i = 1; i <= 80; i++) {
@@ -384,7 +308,7 @@ app.post("/api/subscribe", (req, res) => {
   }
 });
 
-// ⏰ Timetable and Cron Job
+// ⏰ Timetable & Cron Job
 let sentAlertsLog = {}; 
 const timetable = {
   MON: [
@@ -467,4 +391,9 @@ cron.schedule("* * * * *", () => {
   }
 }, {
   scheduled: true,
-  t
+  timezone: "Asia/Kolkata"
+});
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`🚀 Advanced BCA Attendance App live on port ${PORT}`));
+  
