@@ -131,7 +131,7 @@ app.post("/api/login", (req, res) => {
   const sql = "SELECT * FROM bca_students WHERE enroll_no = ? AND phone = ?";
   db.query(sql, [cleanEnroll, cleanPhone], (err, results) => {
     if (err) return res.status(500).json({ error: "Database error." });
-    if (results.length === 0) return res.status(401).json({ error: "Invalid Enrollment Number or Mobile Number." });
+    if (results.length === 0) return res.status(401).json({ error: "Invalid Credentials." });
     
     res.json({ success: true, student: results[0] });
   });
@@ -171,7 +171,7 @@ app.get("/api/admin/attendance", (req, res) => {
   });
 });
 
-// 👑 Admin API: Delete Attendance
+// 👑 Admin API: Delete Attendance Record
 app.post("/api/admin/attendance/delete", (req, res) => {
   const { id } = req.body;
   const sql = "DELETE FROM lecture_attendance WHERE id = ?";
@@ -222,7 +222,7 @@ app.get("/api/admin/whatsapp-link", (req, res) => {
   });
 });
 
-// ✏️ Admin API: Add/Update Teacher Number
+// ✏️ Admin API: Add/Update Teacher Phone Number
 app.post("/api/admin/update-teacher", (req, res) => {
   const { teacherName, phone } = req.body;
   if (!teacherName || !phone) {
@@ -238,7 +238,7 @@ app.post("/api/admin/update-teacher", (req, res) => {
   }
 });
 
-// 🔔 OneSignal Push Notification Function
+// 🔔 OneSignal Interactive Push Notification Function
 async function sendOneSignalNotification(title, messageText, subject = "", teacher = "") {
   if (!ONESIGNAL_REST_API_KEY) {
     console.error("❌ Error: ONESIGNAL_REST_API_KEY is missing!");
@@ -257,7 +257,7 @@ async function sendOneSignalNotification(title, messageText, subject = "", teach
       body: JSON.stringify({
         app_id: ONESIGNAL_APP_ID,
         included_segments: ["All", "Total Subscriptions"],
-        headings: { en: title || "📢 BCA Department Alert" },
+        headings: { en: title || "📢 BCA Lecture Alert" },
         contents: { en: messageText },
         buttons: [
           { id: "yes_btn", text: "🟢 YES (PRESENT)", icon: "ic_menu_send" },
@@ -308,51 +308,52 @@ app.post("/api/subscribe", (req, res) => {
   }
 });
 
-// ⏰ Timetable & Cron Job
+// ⏰ TIMETABLE (SESSION 2026-27 - SY BCA Sem III)
 let sentAlertsLog = {}; 
 const timetable = {
   MON: [
-    { start: "10:00", subject: "Advance Excel Lab", teacher: "Prof. Pranav A. Dhabarde", room: "Lab 1" },
-    { start: "11:00", subject: "Lab on Ecommerce", teacher: "Dr. Shailesh R. Thakare", room: "Lab 2" },
-    { start: "12:45", subject: "Computer Graphics", teacher: "Prof. Anuj S. Deshmukh", room: "Room 101" },
-    { start: "13:45", subject: "Modern Operating System", teacher: "Prof. Rahul G. Nimbokar", room: "Room 101" },
-    { start: "15:00", subject: "Mini Project", teacher: "Project Coordinator", room: "Project Lab" },
-    { start: "16:00", subject: "Library", teacher: "Library Staff", room: "Library" },
+    { start: "10:00", end: "11:00", subject: "Advance Excel Lab A1 / CG Lab A2", teacher: "Prof. Pranav A. Dhabarde / Dr. Vaibhav V. Thakare", room: "CC_Lab-203 / CC_Lab-204" },
+    { start: "11:00", end: "12:00", subject: "Advance Excel Lab A1 / CG Lab A2", teacher: "Prof. Pranav A. Dhabarde / Dr. Vaibhav V. Thakare", room: "CC_Lab-203 / CC_Lab-204" },
+    { start: "12:45", end: "13:45", subject: "Ecommerce", teacher: "Prof. Shekhar Todakar", room: "Room 103" },
+    { start: "13:45", end: "14:45", subject: "Computer Graphics", teacher: "Prof. Anuj S. Deshmukh", room: "Room 103" },
+    { start: "15:00", end: "16:00", subject: "Modern Operating System", teacher: "Prof. Rahul G. Nimbokar", room: "Room 103" },
+    { start: "16:00", end: "17:00", subject: "Library", teacher: "Library Staff", room: "Library" }
   ],
   TUE: [
-    { start: "10:00", subject: "Management Information System", teacher: "Dr. Shailesh R. Thakare", room: "Room 101" },
-    { start: "11:00", subject: "Ecommerce", teacher: "Prof. Shekhar Todakar", room: "Room 101" },
-    { start: "12:45", subject: "Advance Excel Lab", teacher: "Prof. Pranav A. Dhabarde", room: "Lab 1" },
-    { start: "13:45", subject: "Lab on Modern Operating System", teacher: "Dr. Sonali Nimbhorkar", room: "Lab 3" },
-    { start: "15:00", subject: "Mini Project", teacher: "Project Coordinator", room: "Project Lab" },
-    { start: "16:00", subject: "Library", teacher: "Library Staff", room: "Library" },
+    { start: "10:00", end: "11:00", subject: "MOS Lab A1 / Ecommerce Lab A2", teacher: "Dr. Sonali Nimbhorkar / Dr. Shailesh R. Thakare", room: "CC_Lab-203 / CC_Lab-204" },
+    { start: "11:00", end: "12:00", subject: "MOS Lab A1 / Ecommerce Lab A2", teacher: "Dr. Sonali Nimbhorkar / Dr. Shailesh R. Thakare", room: "CC_Lab-203 / CC_Lab-204" },
+    { start: "12:45", end: "13:45", subject: "Ecommerce", teacher: "Prof. Shekhar Todakar", room: "Room 103" },
+    { start: "13:45", end: "14:45", subject: "Physical Education", teacher: "Dr. Amar More", room: "Ground" },
+    { start: "15:00", end: "16:00", subject: "Mini Project", teacher: "Project Coordinator", room: "Project Lab" },
+    { start: "16:00", end: "17:00", subject: "Library", teacher: "Library Staff", room: "Library" }
   ],
   WED: [
-    { start: "10:00", subject: "Lab on Computer Graphics", teacher: "Dr. Vaibhav V. Thakare", room: "Lab 2" },
-    { start: "11:00", subject: "Advance Excel Lab", teacher: "Prof. Pranav A. Dhabarde", room: "Lab 1" },
-    { start: "12:45", subject: "Computer Graphics", teacher: "Prof. Anuj S. Deshmukh", room: "Room 101" },
-    { start: "13:45", subject: "Aptitude", teacher: "Sachin J. Deshpande", room: "Room 101" },
-    { start: "15:00", subject: "Physical Education", teacher: "Dr. Amar More", room: "Ground" },
-    { start: "16:00", subject: "Physical Education", teacher: "Dr. Amar More", room: "Ground" },
+    { start: "10:00", end: "11:00", subject: "CG Lab A1 / Advance Excel Lab A2", teacher: "Dr. Vaibhav V. Thakare / Prof. Pranav A. Dhabarde", room: "CC_Lab-203 / CC_Lab-204" },
+    { start: "11:00", end: "12:00", subject: "CG Lab A1 / Advance Excel Lab A2", teacher: "Dr. Vaibhav V. Thakare / Prof. Pranav A. Dhabarde", room: "CC_Lab-203 / CC_Lab-204" },
+    { start: "12:45", end: "13:45", subject: "Management Information System", teacher: "Dr. Shailesh R. Thakare", room: "Room 103" },
+    { start: "13:45", end: "14:45", subject: "Computer Graphics", teacher: "Prof. Anuj S. Deshmukh", room: "Room 103" },
+    { start: "15:00", end: "16:00", subject: "Aptitude", teacher: "Sachin J. Deshpande", room: "Room 103" },
+    { start: "16:00", end: "17:00", subject: "Physical Education", teacher: "Dr. Amar More", room: "Ground" }
   ],
   THU: [
-    { start: "10:00", subject: "Management Information System", teacher: "Dr. Shailesh R. Thakare", room: "Room 101" },
-    { start: "11:00", subject: "Ecommerce", teacher: "Prof. Shekhar Todakar", room: "Room 101" },
-    { start: "12:45", subject: "Modern Operating System", teacher: "Prof. Rahul G. Nimbokar", room: "Room 101" },
-    { start: "13:45", subject: "Communication Skill", teacher: "Prof. Ashwini Rathi", room: "Room 101" },
-    { start: "15:00", subject: "Lab on Modern Operating System", teacher: "Dr. Sonali Nimbhorkar", room: "Lab 3" },
-    { start: "16:00", subject: "Lab on Computer Graphics", teacher: "Dr. Vaibhav V. Thakare", room: "Lab 2" },
+    { start: "10:00", end: "11:00", subject: "Advance Excel Lab A1 / MOS Lab A2", teacher: "Prof. Pranav A. Dhabarde / Dr. Sonali Nimbhorkar", room: "CC_Lab-203 / CC_Lab-204" },
+    { start: "11:00", end: "12:00", subject: "Advance Excel Lab A1 / MOS Lab A2", teacher: "Prof. Pranav A. Dhabarde / Dr. Sonali Nimbhorkar", room: "CC_Lab-203 / CC_Lab-204" },
+    { start: "12:45", end: "13:45", subject: "Management Information System", teacher: "Dr. Shailesh R. Thakare", room: "Room 103" },
+    { start: "13:45", end: "14:45", subject: "Communication Skill", teacher: "Prof. Ashwini Rathi", room: "Room 103" },
+    { start: "15:00", end: "16:00", subject: "Physical Education", teacher: "Dr. Amar More", room: "Ground" },
+    { start: "16:00", end: "17:00", subject: "Physical Education", teacher: "Dr. Amar More", room: "Ground" }
   ],
   FRI: [
-    { start: "10:00", subject: "Communication Skill", teacher: "Prof. Ashwini Rathi", room: "Room 101" },
-    { start: "11:00", subject: "Ecommerce", teacher: "Prof. Shekhar Todakar", room: "Room 101" },
-    { start: "12:45", subject: "Lab on Ecommerce", teacher: "Dr. Shailesh R. Thakare", room: "Lab 2" },
-    { start: "13:45", subject: "Advance Excel", teacher: "Prof. Pranav A. Dhabarde", room: "Room 101" },
-    { start: "15:00", subject: "Physical Education", teacher: "Dr. Amar More", room: "Ground" },
-    { start: "16:00", subject: "Physical Education", teacher: "Dr. Amar More", room: "Ground" },
-  ],
+    { start: "10:00", end: "11:00", subject: "Ecommerce Lab A1 / Advance Excel Lab A2", teacher: "Dr. Shailesh R. Thakare / Prof. Pranav A. Dhabarde", room: "CC_Lab-203 / CC_Lab-204" },
+    { start: "11:00", end: "12:00", subject: "Ecommerce Lab A1 / Advance Excel Lab A2", teacher: "Dr. Shailesh R. Thakare / Prof. Pranav A. Dhabarde", room: "CC_Lab-203 / CC_Lab-204" },
+    { start: "12:45", end: "13:45", subject: "Ecommerce", teacher: "Prof. Shekhar Todakar", room: "Room 103" },
+    { start: "13:45", end: "14:45", subject: "Communication Skill", teacher: "Prof. Ashwini Rathi", room: "Room 103" },
+    { start: "15:00", end: "16:00", subject: "Modern Operating System", teacher: "Prof. Rahul G. Nimbokar", room: "Room 103" },
+    { start: "16:00", end: "17:00", subject: "Library", teacher: "Library Staff", room: "Library" }
+  ]
 };
 
+// ⏰ Automatic Cron Alert Generator (Runs every minute)
 cron.schedule("* * * * *", () => {
   const nowInIndia = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
   const days = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
@@ -384,8 +385,13 @@ cron.schedule("* * * * *", () => {
   if (upcomingLecture) {
     const alertKey = `${currentDay}-${upcomingLecture.start}`;
     if (!sentAlertsLog[alertKey]) {
-      const lectureMsg = `📢 Lecture Alert: ${upcomingLecture.subject} at ${upcomingLecture.start} in ${upcomingLecture.room}. Are you attending?`;
-      sendOneSignalNotification("📚 Lecture Attendance Alert", lectureMsg, upcomingLecture.subject, upcomingLecture.teacher);
+      // 🎯 Cleaned Format without extra text
+      const lectureMsg = `⏰ Lecture Time: ${upcomingLecture.start} - ${upcomingLecture.end}\n` +
+                         `📚 Subject: ${upcomingLecture.subject}\n` +
+                         `👨‍🏫 Teacher: ${upcomingLecture.teacher}\n` +
+                         `🏫 Room No: ${upcomingLecture.room}`;
+                         
+      sendOneSignalNotification("📢 BCA Lecture Alert", lectureMsg, upcomingLecture.subject, upcomingLecture.teacher);
       sentAlertsLog[alertKey] = true;
     }
   }
@@ -395,5 +401,4 @@ cron.schedule("* * * * *", () => {
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`🚀 Advanced BCA Attendance App live on port ${PORT}`));
-  
+app.listen(PORT, () => console.log(`🚀 SY BCA Sem III Attendance Server online on port ${PORT}`));
