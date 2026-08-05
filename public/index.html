@@ -21,7 +21,11 @@
     <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
     
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
         :root {
             --primary-violet: #7b2cbf;
@@ -40,21 +44,62 @@
         }
 
         .background-container {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            z-index: 1; overflow: hidden; pointer-events: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+            overflow: hidden;
+            pointer-events: none;
         }
 
-        .orb { position: absolute; border-radius: 50%; filter: blur(80px); opacity: 0.3; mix-blend-mode: screen; }
-        .orb-1 { width: 300px; height: 300px; background: radial-gradient(circle, var(--primary-violet), transparent); top: -100px; left: -100px; animation: float-orb-1 20s ease-in-out infinite; }
-        .orb-2 { width: 400px; height: 400px; background: radial-gradient(circle, var(--electric-blue), transparent); bottom: -150px; right: -100px; animation: float-orb-2 25s ease-in-out infinite; }
-        .orb-3 { width: 250px; height: 250px; background: radial-gradient(circle, var(--glowing-green), transparent); top: 50%; right: 10%; animation: float-orb-3 22s ease-in-out infinite; }
+        .orb {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(80px);
+            opacity: 0.3;
+            mix-blend-mode: screen;
+        }
+
+        .orb-1 {
+            width: 300px;
+            height: 300px;
+            background: radial-gradient(circle, var(--primary-violet), transparent);
+            top: -100px;
+            left: -100px;
+            animation: float-orb-1 20s ease-in-out infinite;
+        }
+
+        .orb-2 {
+            width: 400px;
+            height: 400px;
+            background: radial-gradient(circle, var(--electric-blue), transparent);
+            bottom: -150px;
+            right: -100px;
+            animation: float-orb-2 25s ease-in-out infinite;
+        }
+
+        .orb-3 {
+            width: 250px;
+            height: 250px;
+            background: radial-gradient(circle, var(--glowing-green), transparent);
+            top: 50%;
+            right: 10%;
+            animation: float-orb-3 22s ease-in-out infinite;
+        }
 
         @keyframes float-orb-1 { 0%, 100% { transform: translate(0, 0); } 50% { transform: translate(100px, 0); } }
         @keyframes float-orb-2 { 0%, 100% { transform: translate(0, 0); } 50% { transform: translate(-100px, 0); } }
         @keyframes float-orb-3 { 0%, 100% { transform: translate(0, 0); } 50% { transform: translate(-80px, 80px); } }
 
-        .avatar-bounce { animation: floatStudent 3.5s infinite ease-in-out; }
-        @keyframes floatStudent { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-12px); } }
+        .avatar-bounce {
+            animation: floatStudent 3.5s infinite ease-in-out;
+        }
+        @keyframes floatStudent {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-12px); }
+        }
 
         .glass-card {
             background: rgba(20, 20, 40, 0.75);
@@ -62,6 +107,7 @@
             border: 1px solid var(--glass-border);
             border-radius: 20px;
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+            transition: all 0.3s ease;
         }
 
         .input-field {
@@ -74,23 +120,70 @@
             width: 100%;
         }
 
-        .input-field:focus { outline: none; border-color: var(--electric-blue); box-shadow: 0 0 15px rgba(0, 153, 255, 0.4); }
+        .input-field:focus {
+            outline: none;
+            border-color: var(--electric-blue);
+            box-shadow: 0 0 20px rgba(0, 153, 255, 0.4);
+        }
 
-        .input-label { display: block; font-size: 12px; font-weight: 600; text-transform: uppercase; color: rgba(224, 224, 224, 0.7); margin-bottom: 6px; }
+        .input-label {
+            display: block;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: rgba(224, 224, 224, 0.7);
+            margin-bottom: 6px;
+        }
 
         .btn-primary {
             background: linear-gradient(135deg, var(--primary-violet), var(--electric-blue));
-            color: white; border: none; border-radius: 12px; padding: 12px 24px; font-weight: 600; font-size: 14px; cursor: pointer; width: 100%;
-            text-transform: uppercase; display: flex; align-items: center; justify-content: center; gap: 8px;
+            color: white;
+            border: none;
+            border-radius: 12px;
+            padding: 12px 24px;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            width: 100%;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
         }
 
-        .btn-action { border: none; border-radius: 12px; padding: 12px 20px; font-weight: 600; font-size: 13px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; }
+        .btn-action {
+            border: none;
+            border-radius: 12px;
+            padding: 12px 20px;
+            font-weight: 600;
+            font-size: 13px;
+            cursor: pointer;
+            text-transform: uppercase;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            width: 100%;
+        }
+
         .btn-present { background: linear-gradient(135deg, var(--glowing-green), #00cc66); color: #000; }
         .btn-absent { background: linear-gradient(135deg, #ff3333, #cc0000); color: white; }
 
-        .action-buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 15px; }
+        .action-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-top: 15px;
+        }
 
-        .form-container { width: 100%; max-width: 450px; z-index: 10; }
+        .form-container {
+            width: 100%;
+            max-width: 450px;
+            z-index: 10;
+        }
     </style>
 </head>
 <body class="flex items-center justify-center min-h-screen p-4 relative">
@@ -103,7 +196,7 @@
 
     <div class="form-container">
 
-        <!-- TOP BAR -->
+        <!-- TOP BAR (CLEANED - NO ADMIN BUTTON) -->
         <div class="flex justify-between items-center mb-6 px-2 relative z-10">
             <div class="flex items-center gap-3">
                 <div class="w-10 h-10 rounded-xl bg-purple-600/30 border border-purple-400/40 flex items-center justify-center font-bold text-xl text-purple-300">
@@ -114,14 +207,13 @@
                     <p class="text-xs text-purple-300/80">G H Raisoni University</p>
                 </div>
             </div>
-            <div class="flex items-center gap-3">
-                <button onclick="openAdminModal()" class="text-xs bg-purple-600/40 hover:bg-purple-600/60 text-purple-200 px-3 py-1.5 rounded-xl border border-purple-400/30 font-semibold">
-                    👑 Admin
-                </button>
+            <div class="relative">
+                <i class="fa-solid fa-bell text-2xl text-purple-300"></i>
+                <span class="absolute -top-1 -right-1 w-2.5 h-2.5 bg-emerald-400 rounded-full"></span>
             </div>
         </div>
 
-        <!-- 1️⃣ SCREEN 1: LOGIN FORM -->
+        <!-- 1️⃣ SCREEN 1: LOGIN FORM WITH CUSTOM RAISONI STUDENT AVATAR -->
         <div id="loginCard" class="glass-card p-6 animate__animated animate__fadeInUp">
             
             <div class="flex justify-center mb-3">
@@ -207,7 +299,7 @@
                         <select id="regSem" required class="input-field bg-slate-800">
                             <option value="SEM 1">SEM 1</option>
                             <option value="SEM 2">SEM 2</option>
-                            <option value="SEM 3">SEM 3</option>
+                            <option value="SEM 3" selected>SEM 3</option>
                             <option value="SEM 4">SEM 4</option>
                         </select>
                     </div>
@@ -229,7 +321,7 @@
         <div id="dashboardCard" class="glass-card p-6 hidden animate__animated animate__fadeIn">
             <div class="flex items-center justify-between border-b border-white/10 pb-4 mb-4">
                 <div>
-                    <span class="text-[10px] bg-purple-500/30 text-purple-300 font-semibold px-2.5 py-0.5 rounded-full border border-purple-400/30" id="dashSem">SEM 2</span>
+                    <span class="text-[10px] bg-purple-500/30 text-purple-300 font-semibold px-2.5 py-0.5 rounded-full border border-purple-400/30" id="dashSem">SEM 3</span>
                     <h3 class="text-lg font-bold text-white mt-1" id="dashName">Student Name</h3>
                     <p class="text-xs text-gray-400 font-mono" id="dashEnroll">GHRUA25011140000</p>
                 </div>
@@ -264,55 +356,10 @@
                 </div>
             </div>
 
+            <!-- Status Result Display -->
             <div id="statusResultCard" class="bg-white/5 rounded-2xl p-4 text-center border border-white/10">
                 <p class="text-xs text-gray-400 mb-1">Today's Attendance Status</p>
                 <p id="statusText" class="text-sm font-bold text-gray-300">Pending Selection...</p>
-            </div>
-        </div>
-
-        <!-- 👑 4️⃣ SCREEN 4: ADMIN DASHBOARD MODAL -->
-        <div id="adminModal" class="fixed inset-0 bg-black/80 backdrop-blur-md hidden flex items-center justify-center p-4 z-50">
-            <div class="glass-card w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto">
-                <div class="flex justify-between items-center mb-4 pb-2 border-b border-white/10">
-                    <h3 class="text-lg font-bold text-purple-300 flex items-center gap-2">
-                        👑 Admin Attendance Control
-                    </h3>
-                    <button onclick="closeAdminModal()" class="text-gray-400 hover:text-white text-xl">&times;</button>
-                </div>
-
-                <!-- Teacher Selection for WhatsApp Share -->
-                <div class="mb-5 bg-white/5 p-3.5 rounded-xl border border-white/10">
-                    <label class="input-label">Send Live WhatsApp Attendance Report</label>
-                    <div class="grid grid-cols-2 gap-2 mt-2">
-                        <select id="adminSubject" class="input-field bg-slate-800 text-xs">
-                            <option value="Computer Graphics">Computer Graphics</option>
-                            <option value="Advance Excel Lab">Advance Excel Lab</option>
-                            <option value="Ecommerce">Ecommerce</option>
-                            <option value="Modern Operating System">Modern Operating System</option>
-                        </select>
-                        <select id="adminTeacher" class="input-field bg-slate-800 text-xs">
-                            <option value="Prof. Anuj S. Deshmukh">Prof. Anuj S. Deshmukh</option>
-                            <option value="Dr. Vaibhav V. Thakare">Dr. Vaibhav V. Thakare</option>
-                            <option value="Prof. Rahul G. Nimbokar">Prof. Rahul G. Nimbokar</option>
-                            <option value="Dr. Sonali Nimbhorkar">Dr. Sonali Nimbhorkar</option>
-                            <option value="Prof. Shekhar Todakar">Prof. Shekhar Todakar</option>
-                            <option value="Dr. Shailesh R. Thakare">Dr. Shailesh R. Thakare</option>
-                            <option value="Prof. Pranav A. Dhabarde">Prof. Pranav A. Dhabarde</option>
-                            <option value="Dr. Amar More">Dr. Amar More</option>
-                            <option value="Prof. Ashwini Rathi">Prof. Ashwini Rathi</option>
-                            <option value="Sachin J. Deshpande">Sachin J. Deshpande</option>
-                        </select>
-                    </div>
-                    <button onclick="sendWhatsAppReport()" class="w-full mt-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2.5 rounded-xl text-xs flex items-center justify-center gap-2">
-                        <i class="fa-brands fa-whatsapp text-lg"></i> Send Attendance To Teacher WhatsApp
-                    </button>
-                </div>
-
-                <!-- Today's Recorded Attendance Table -->
-                <h4 class="text-xs font-bold text-gray-300 uppercase mb-2">Today's Recorded Attendance</h4>
-                <div id="attendanceList" class="space-y-2 mb-4">
-                    <p class="text-xs text-gray-400 text-center">Loading list...</p>
-                </div>
             </div>
         </div>
 
@@ -351,13 +398,14 @@
                     currentStudent = data.student;
                     openDashboard();
                 } else {
-                    alert(data.error || "Login Failed!");
+                    alert(data.error || "Invalid Credentials!");
                 }
             } catch (err) {
                 alert("Server connection error.");
             }
         }
 
+        /* 🔧 FIXED: Already Registered Error Handling */
         async function handleRegister(e) {
             e.preventDefault();
             const payload = {
@@ -365,4 +413,51 @@
                 enroll_no: document.getElementById('regEnroll').value,
                 phone: document.getElementById('regPhone').value,
                 sem: document.getElementById('regSem').value
-    
+            };
+
+            try {
+                const res = await fetch('/api/subscribe', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (res.status === 200) {
+                    alert("✅ Registration Successful! Please Sign In now.");
+                    toggleAuth('login');
+                } else if (res.status === 409) {
+                    alert("⚠️ Already Registered! Your Enrollment Number or Phone is already in database. Please Sign In directly.");
+                    toggleAuth('login');
+                } else if (res.status === 403) {
+                    alert("❌ Access Denied! Invalid Enrollment Number sequence.");
+                } else {
+                    alert("Registration Failed. Please check inputs.");
+                }
+            } catch (err) {
+                alert("Server error.");
+            }
+        }
+
+        function openDashboard() {
+            document.getElementById('loginCard').classList.add('hidden');
+            document.getElementById('registerCard').classList.add('hidden');
+            document.getElementById('dashboardCard').classList.remove('hidden');
+
+            document.getElementById('dashName').innerText = currentStudent.name;
+            document.getElementById('dashEnroll').innerText = currentStudent.enroll_no;
+            document.getElementById('dashSem').innerText = currentStudent.sem;
+        }
+
+        function markAttendance(statusChoice) {
+            if (statusChoice === 'NO') {
+                sendAttendanceRequest(statusChoice, null, null);
+                return;
+            }
+
+            if ("geolocation" in navigator) {
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        sendAttendanceRequest('YES', position.coords.latitude, position.coords.longitude);
+                    },
+                    (error) => {
+                        alert("❌ Location Permission Required to Verify Campus Attendan
