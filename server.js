@@ -17,12 +17,12 @@ app.use(express.static(path.join(__dirname, "public")));
 const ONESIGNAL_APP_ID = "d2ced897-0702-4d42-a341-8c9e0821cc6f";
 const ONESIGNAL_REST_API_KEY = process.env.ONESIGNAL_REST_API_KEY;
 
-// 📍 COLLEGE GPS COORDINATES (G H Raisoni University, Amravati City Office)
+// 📍 COLLEGE GPS COORDINATES (G H Raisoni University, Amravati)
 const COLLEGE_LAT = 20.9320; 
 const COLLEGE_LNG = 77.7516; 
 const MAX_ALLOWED_DISTANCE_METERS = 150; 
 
-// 📞 Teachers Contact Database (10 Digit Indian Numbers)
+// 📞 Teachers Contact Database
 let teachersMap = {
   "Prof. Anuj S. Deshmukh": "8605685337",
   "Dr. Vaibhav V. Thakare": "9766045765",
@@ -36,7 +36,7 @@ let teachersMap = {
   "Sachin J. Deshpande": ""   
 };
 
-// 🛢️ MySQL डेटाबेस कनेक्शन (Aiven Cloud)
+// 🛢️ MySQL डेटाबेस कनेक्शन
 const dbConfig = {
   host: "mysql-3a8a9382-yash721950-fa6f.b.aivencloud.com",      
   port: 27814,
@@ -51,10 +51,10 @@ function handleDisconnect() {
   db = mysql.createConnection(dbConfig);
   db.connect((err) => {
     if (err) {
-      console.error("❌ MySQL डेटाबेस कनेक्शन फेल:", err.message);
+      console.error("❌ MySQL कनेक्शन फेल:", err.message);
       setTimeout(handleDisconnect, 2000);
     } else {
-      console.log("✅ MySQL डेटाबेस यशस्वीरित्या कनेक्ट झाला! 🛢️");
+      console.log("✅ MySQL डेटाबेस कनेक्ट झाला! 🛢️");
       setupTables();
     }
   });
@@ -76,6 +76,7 @@ function setupTables() {
       name VARCHAR(100) NOT NULL,
       enroll_no VARCHAR(50) UNIQUE NOT NULL,
       sem VARCHAR(10) NOT NULL,
+      password VARCHAR(255) NOT NULL,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
   `;
@@ -94,11 +95,14 @@ function setupTables() {
     );
   `;
 
-  db.query(createStudentsTable, () => {});
+  db.query(createStudentsTable, () => {
+    // Password Column नसला तर ॲड करण्यासाठी सेफ्टी चेक
+    db.query("ALTER TABLE bca_students ADD COLUMN IF NOT EXISTS password VARCHAR(255) NOT NULL DEFAULT '123456'", () => {});
+  });
   db.query(createAttendanceTable, () => {});
 }
 
-// 📏 Haversine Formula (GPS Distance Calculator in Meters)
+// 📏 Haversine Formula (GPS Distance)
 function getDistanceFromLatLonInMeters(lat1, lon1, lat2, lon2) {
   const R = 6371e3; 
   const dLat = (lat2 - lat1) * Math.PI / 180;
@@ -110,34 +114,83 @@ function getDistanceFromLatLonInMeters(lat1, lon1, lat2, lon2) {
   return R * c; 
 }
 
-app.get("/status", (req, res) => {
-  res.send(`
-    <div style="text-align: center; margin-top: 50px; font-family: Arial, sans-serif;">
-      <h2 style="color: #7b2cbf;">✅ BCA Alert & Attendance System Active!</h2>
-      <p>ॲप पूर्णपणे बॅकग्राउंडला चालू आहे भावा! 😎</p>
-    </div>
-  `);
-});
-
-// 🔐 Student Login API
+// 🔐 Student Login API (With Password)
 app.post("/api/login", (req, res) => {
-  const { enroll_no, phone } = req.body;
-  if (!enroll_no || !phone) return res.status(400).json({ error: "Please fill all fields." });
+  const { enroll_no, password } = req.body;
+  if (!enroll_no || !password) return res.status(400).json({ error: "Please fill all fields." });
 
   const cleanEnroll = String(enroll_no).trim().toUpperCase();
-  let cleanPhone = phone.replace(/[^0-9]/g, "");
-  if (cleanPhone.length === 12 && cleanPhone.startsWith("91")) cleanPhone = cleanPhone.substring(2);
 
-  const sql = "SELECT * FROM bca_students WHERE enroll_no = ? AND phone = ?";
-  db.query(sql, [cleanEnroll, cleanPhone], (err, results) => {
+  const sql = "SELECT * FROM bca_students WHERE enroll_no = ? AND password = ?";
+  db.query(sql, [cleanEnroll, password], (err, results) => {
     if (err) return res.status(500).json({ error: "Database error." });
-    if (results.length === 0) return res.status(401).json({ error: "Invalid Credentials." });
+    if (results.length === 0) return res.status(401).json({ error: "Invalid Enrollment Number or Password!" });
     
     res.json({ success: true, student: results[0] });
   });
 });
 
-// 📍 Mark Attendance with GPS Geofencing
+// 🌐 Student Registration API (With Password)
+const allowedEnrollments = [];
+for (let i = 1; i <= 80; i++) {
+  const paddedNumber = String(i).padStart(4, '0');
+  allowedEnrollments.push(`GHRUA2501114${paddedNumber}`);
+}
+
+app.post("/api/subscribe", (req, res) => {
+  const { phone, name, enroll_no, sem, password } = req.body;
+  if (!phone || !name || !enroll_no || !sem || !password) return res.status(400).send("Please fill all fields.");
+  
+  const studentEnroll = String(enroll_no).trim().toUpperCase(); 
+  if (!allowedEnrollments.includes(studentEnroll)) return res.status(403).send("Access Denied.");
+
+  let cleanPhone = phone.replace(/[^0-9]/g, "");
+  if (cleanPhone.length === 12 && cleanPhone.startsWith("91")) cleanPhone = cleanPhone.substring(2);
+
+  if (cleanPhone.length === 10) {
+    const checkSql = "SELECT * FROM bca_students WHERE phone = ? OR enroll_no = ?";
+    db.query(checkSql, [cleanPhone, studentEnroll], (checkErr, results) => {
+      if (checkErr) return res.status(500).send("Database Error.");
+      if (results && results.length > 0) return res.status(409).send("Already Registered.");
+
+      const insertSql = "INSERT INTO bca_students (phone, name, enroll_no, sem, password) VALUES (?, ?, ?, ?, ?)";
+      db.query(insertSql, [cleanPhone, name, studentEnroll, sem, password], (err) => {
+        if (err) return res.status(500).send("Database Error.");
+        res.sendStatus(200);
+      });
+    });
+  } else {
+    res.status(400).send("Invalid Phone Number.");
+  }
+});
+
+// 🔑 Forgot Password Reset API (Enrollment + Mobile Verification)
+app.post("/api/reset-password", (req, res) => {
+  const { enroll_no, phone, new_password } = req.body;
+  if (!enroll_no || !phone || !new_password) {
+    return res.status(400).json({ error: "All fields are required." });
+  }
+
+  const cleanEnroll = String(enroll_no).trim().toUpperCase();
+  let cleanPhone = phone.replace(/[^0-9]/g, "");
+  if (cleanPhone.length === 12 && cleanPhone.startsWith("91")) cleanPhone = cleanPhone.substring(2);
+
+  const checkSql = "SELECT * FROM bca_students WHERE enroll_no = ? AND phone = ?";
+  db.query(checkSql, [cleanEnroll, cleanPhone], (err, results) => {
+    if (err) return res.status(500).json({ error: "Database Error." });
+    if (results.length === 0) {
+      return res.status(404).json({ error: "Enrollment and Phone Number mismatch! Verification failed." });
+    }
+
+    const updateSql = "UPDATE bca_students SET password = ? WHERE enroll_no = ?";
+    db.query(updateSql, [new_password, cleanEnroll], (upErr) => {
+      if (upErr) return res.status(500).json({ error: "Failed to reset password." });
+      res.json({ success: true, message: "Password updated successfully! Please login with your new password." });
+    });
+  });
+});
+
+// 📍 Mark Attendance
 app.post("/api/attendance/mark", (req, res) => {
   const { enroll_no, name, subject, teacher, status, userLat, userLng } = req.body;
 
@@ -171,7 +224,7 @@ app.get("/api/admin/attendance", (req, res) => {
   });
 });
 
-// 👑 Admin API: Delete Attendance Record
+// 👑 Admin API: Delete Attendance
 app.post("/api/admin/attendance/delete", (req, res) => {
   const { id } = req.body;
   const sql = "DELETE FROM lecture_attendance WHERE id = ?";
@@ -187,19 +240,13 @@ app.get("/api/admin/whatsapp-link", (req, res) => {
   let rawPhone = teachersMap[teacher];
 
   if (!rawPhone) {
-    return res.status(404).json({ 
-      error: "शिक्षकांचा नंबर सापडला नाही! कृपया Admin Panel मध्ये नंबर Update करा." 
-    });
+    return res.status(404).json({ error: "Teacher contact missing!" });
   }
 
   let cleanPhone = rawPhone.replace(/[^0-9]/g, "");
   if (cleanPhone.length === 10) cleanPhone = "91" + cleanPhone;
 
-  const sql = `
-    SELECT student_name, enroll_no, status 
-    FROM lecture_attendance 
-    WHERE subject = ? AND date_recorded = CURRENT_DATE
-  `;
+  const sql = `SELECT student_name, enroll_no, status FROM lecture_attendance WHERE subject = ? AND date_recorded = CURRENT_DATE`;
 
   db.query(sql, [subject], (err, results) => {
     if (err) return res.status(500).json({ error: "Database error" });
@@ -216,39 +263,17 @@ app.get("/api/admin/whatsapp-link", (req, res) => {
                     `_Generated via BCA Alert System_`;
 
     const encodedMessage = encodeURIComponent(message);
-    const whatsappUrl = `https://wa.me/${cleanPhone}?text=${encodedMessage}`;
-
-    res.json({ success: true, whatsappUrl });
+    res.json({ success: true, whatsappUrl: `https://wa.me/${cleanPhone}?text=${encodedMessage}` });
   });
 });
 
-// ✏️ Admin API: Add/Update Teacher Phone Number
-app.post("/api/admin/update-teacher", (req, res) => {
-  const { teacherName, phone } = req.body;
-  if (!teacherName || !phone) {
-    return res.status(400).json({ error: "शिक्षक नाव आणि १० अंकी नंबर आवश्यक आहे." });
-  }
-
-  let cleanPhone = phone.replace(/[^0-9]/g, "");
-  if (cleanPhone.length === 10) {
-    teachersMap[teacherName] = cleanPhone;
-    res.json({ success: true, message: `${teacherName} यांचा नंबर (${cleanPhone}) सेव्ह झाला!` });
-  } else {
-    res.status(400).json({ error: "कृपया १० अंकी मोबाईल नंबर टाका." });
-  }
-});
-
-// 🔔 OneSignal Interactive Push Notification Function
+// 🔔 OneSignal Interactive Push Function
 async function sendOneSignalNotification(title, messageText, subject = "", teacher = "") {
-  if (!ONESIGNAL_REST_API_KEY) {
-    console.error("❌ Error: ONESIGNAL_REST_API_KEY is missing!");
-    return;
-  }
-
+  if (!ONESIGNAL_REST_API_KEY) return;
   const cleanKey = ONESIGNAL_REST_API_KEY.trim();
 
   try {
-    const response = await fetch("https://onesignal.com/api/v1/notifications", {
+    await fetch("https://onesignal.com/api/v1/notifications", {
       method: "POST",
       headers: {
         "Content-Type": "application/json; charset=utf-8",
@@ -266,49 +291,12 @@ async function sendOneSignalNotification(title, messageText, subject = "", teach
         data: { subject, teacher }
       })
     });
-
-    const data = await response.json();
-    console.log("✅ Push Notification Broadcast Result:", data);
   } catch (err) {
-    console.error("❌ OneSignal Push Error:", err.message);
+    console.error("❌ Push Error:", err.message);
   }
 }
 
-// 🌐 Student Registration API
-const allowedEnrollments = [];
-for (let i = 1; i <= 80; i++) {
-  const paddedNumber = String(i).padStart(4, '0');
-  allowedEnrollments.push(`GHRUA2501114${paddedNumber}`);
-}
-
-app.post("/api/subscribe", (req, res) => {
-  const { phone, name, enroll_no, sem } = req.body;
-  if (!phone || !name || !enroll_no || !sem) return res.status(400).send("Please fill all fields.");
-  
-  const studentEnroll = String(enroll_no).trim().toUpperCase(); 
-  if (!allowedEnrollments.includes(studentEnroll)) return res.status(403).send("Access Denied.");
-
-  let cleanPhone = phone.replace(/[^0-9]/g, "");
-  if (cleanPhone.length === 12 && cleanPhone.startsWith("91")) cleanPhone = cleanPhone.substring(2);
-
-  if (cleanPhone.length === 10) {
-    const checkSql = "SELECT * FROM bca_students WHERE phone = ? OR enroll_no = ?";
-    db.query(checkSql, [cleanPhone, studentEnroll], (checkErr, results) => {
-      if (checkErr) return res.status(500).send("Database Error.");
-      if (results && results.length > 0) return res.status(409).send("Already Registered.");
-
-      const insertSql = "INSERT INTO bca_students (phone, name, enroll_no, sem) VALUES (?, ?, ?, ?)";
-      db.query(insertSql, [cleanPhone, name, studentEnroll, sem], (err) => {
-        if (err) return res.status(500).send("Database Error.");
-        res.sendStatus(200);
-      });
-    });
-  } else {
-    res.status(400).send("Invalid Phone Number.");
-  }
-});
-
-// ⏰ TIMETABLE (SESSION 2026-27 - SY BCA Sem III)
+// ⏰ TIMETABLE (SESSION 2026-27)
 let sentAlertsLog = {}; 
 const timetable = {
   MON: [
@@ -316,44 +304,15 @@ const timetable = {
     { start: "11:00", end: "12:00", subject: "Advance Excel Lab A1 / CG Lab A2", teacher: "Prof. Pranav A. Dhabarde / Dr. Vaibhav V. Thakare", room: "CC_Lab-203 / CC_Lab-204" },
     { start: "12:45", end: "13:45", subject: "Ecommerce", teacher: "Prof. Shekhar Todakar", room: "Room 103" },
     { start: "13:45", end: "14:45", subject: "Computer Graphics", teacher: "Prof. Anuj S. Deshmukh", room: "Room 103" },
-    { start: "15:00", end: "16:00", subject: "Modern Operating System", teacher: "Prof. Rahul G. Nimbokar", room: "Room 103" },
-    { start: "16:00", end: "17:00", subject: "Library", teacher: "Library Staff", room: "Library" }
+    { start: "15:00", end: "16:00", subject: "Modern Operating System", teacher: "Prof. Rahul G. Nimbokar", room: "Room 103" }
   ],
   TUE: [
     { start: "10:00", end: "11:00", subject: "MOS Lab A1 / Ecommerce Lab A2", teacher: "Dr. Sonali Nimbhorkar / Dr. Shailesh R. Thakare", room: "CC_Lab-203 / CC_Lab-204" },
     { start: "11:00", end: "12:00", subject: "MOS Lab A1 / Ecommerce Lab A2", teacher: "Dr. Sonali Nimbhorkar / Dr. Shailesh R. Thakare", room: "CC_Lab-203 / CC_Lab-204" },
-    { start: "12:45", end: "13:45", subject: "Ecommerce", teacher: "Prof. Shekhar Todakar", room: "Room 103" },
-    { start: "13:45", end: "14:45", subject: "Physical Education", teacher: "Dr. Amar More", room: "Ground" },
-    { start: "15:00", end: "16:00", subject: "Mini Project", teacher: "Project Coordinator", room: "Project Lab" },
-    { start: "16:00", end: "17:00", subject: "Library", teacher: "Library Staff", room: "Library" }
-  ],
-  WED: [
-    { start: "10:00", end: "11:00", subject: "CG Lab A1 / Advance Excel Lab A2", teacher: "Dr. Vaibhav V. Thakare / Prof. Pranav A. Dhabarde", room: "CC_Lab-203 / CC_Lab-204" },
-    { start: "11:00", end: "12:00", subject: "CG Lab A1 / Advance Excel Lab A2", teacher: "Dr. Vaibhav V. Thakare / Prof. Pranav A. Dhabarde", room: "CC_Lab-203 / CC_Lab-204" },
-    { start: "12:45", end: "13:45", subject: "Management Information System", teacher: "Dr. Shailesh R. Thakare", room: "Room 103" },
-    { start: "13:45", end: "14:45", subject: "Computer Graphics", teacher: "Prof. Anuj S. Deshmukh", room: "Room 103" },
-    { start: "15:00", end: "16:00", subject: "Aptitude", teacher: "Sachin J. Deshpande", room: "Room 103" },
-    { start: "16:00", end: "17:00", subject: "Physical Education", teacher: "Dr. Amar More", room: "Ground" }
-  ],
-  THU: [
-    { start: "10:00", end: "11:00", subject: "Advance Excel Lab A1 / MOS Lab A2", teacher: "Prof. Pranav A. Dhabarde / Dr. Sonali Nimbhorkar", room: "CC_Lab-203 / CC_Lab-204" },
-    { start: "11:00", end: "12:00", subject: "Advance Excel Lab A1 / MOS Lab A2", teacher: "Prof. Pranav A. Dhabarde / Dr. Sonali Nimbhorkar", room: "CC_Lab-203 / CC_Lab-204" },
-    { start: "12:45", end: "13:45", subject: "Management Information System", teacher: "Dr. Shailesh R. Thakare", room: "Room 103" },
-    { start: "13:45", end: "14:45", subject: "Communication Skill", teacher: "Prof. Ashwini Rathi", room: "Room 103" },
-    { start: "15:00", end: "16:00", subject: "Physical Education", teacher: "Dr. Amar More", room: "Ground" },
-    { start: "16:00", end: "17:00", subject: "Physical Education", teacher: "Dr. Amar More", room: "Ground" }
-  ],
-  FRI: [
-    { start: "10:00", end: "11:00", subject: "Ecommerce Lab A1 / Advance Excel Lab A2", teacher: "Dr. Shailesh R. Thakare / Prof. Pranav A. Dhabarde", room: "CC_Lab-203 / CC_Lab-204" },
-    { start: "11:00", end: "12:00", subject: "Ecommerce Lab A1 / Advance Excel Lab A2", teacher: "Dr. Shailesh R. Thakare / Prof. Pranav A. Dhabarde", room: "CC_Lab-203 / CC_Lab-204" },
-    { start: "12:45", end: "13:45", subject: "Ecommerce", teacher: "Prof. Shekhar Todakar", room: "Room 103" },
-    { start: "13:45", end: "14:45", subject: "Communication Skill", teacher: "Prof. Ashwini Rathi", room: "Room 103" },
-    { start: "15:00", end: "16:00", subject: "Modern Operating System", teacher: "Prof. Rahul G. Nimbokar", room: "Room 103" },
-    { start: "16:00", end: "17:00", subject: "Library", teacher: "Library Staff", room: "Library" }
+    { start: "12:45", end: "13:45", subject: "Ecommerce", teacher: "Prof. Shekhar Todakar", room: "Room 103" }
   ]
 };
 
-// ⏰ Automatic Cron Alert Generator (Runs every minute)
 cron.schedule("* * * * *", () => {
   const nowInIndia = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
   const days = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
@@ -362,16 +321,7 @@ cron.schedule("* * * * *", () => {
   const currentMinutes = String(nowInIndia.getMinutes()).padStart(2, '0');
   const currentTimeStr = `${currentHours}:${currentMinutes}`;
 
-  if (currentDay === "SAT" || currentDay === "SUN") {
-    if (currentTimeStr === "11:10") {
-      const holidayKey = `${currentDay}-holiday-1110`;
-      if (!sentAlertsLog[holidayKey]) {
-        sendOneSignalNotification("🌴 Weekend Notice", "Weekend Holiday: No Classes Today. Enjoy your weekend!");
-        sentAlertsLog[holidayKey] = true;
-      }
-    }
-    return; 
-  }
+  if (currentDay === "SAT" || currentDay === "SUN") return;
 
   const currentSchedule = timetable[currentDay] || [];
   const upcomingLecture = currentSchedule.find((l) => {
@@ -385,20 +335,12 @@ cron.schedule("* * * * *", () => {
   if (upcomingLecture) {
     const alertKey = `${currentDay}-${upcomingLecture.start}`;
     if (!sentAlertsLog[alertKey]) {
-      // 🎯 Cleaned Format without extra text
-      const lectureMsg = `⏰ Lecture Time: ${upcomingLecture.start} - ${upcomingLecture.end}\n` +
-                         `📚 Subject: ${upcomingLecture.subject}\n` +
-                         `👨‍🏫 Teacher: ${upcomingLecture.teacher}\n` +
-                         `🏫 Room No: ${upcomingLecture.room}`;
-                         
+      const lectureMsg = `⏰ Lecture Time: ${upcomingLecture.start} - ${upcomingLecture.end}\n📚 Subject: ${upcomingLecture.subject}\n👨‍🏫 Teacher: ${upcomingLecture.teacher}\n🏫 Room No: ${upcomingLecture.room}`;
       sendOneSignalNotification("📢 BCA Lecture Alert", lectureMsg, upcomingLecture.subject, upcomingLecture.teacher);
       sentAlertsLog[alertKey] = true;
     }
   }
-}, {
-  scheduled: true,
-  timezone: "Asia/Kolkata"
-});
+}, { scheduled: true, timezone: "Asia/Kolkata" });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`🚀 SY BCA Sem III Attendance Server online on port ${PORT}`));
+app.listen(PORT, () => console.log(`🚀 SY BCA Server online on port ${PORT}`));
