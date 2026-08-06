@@ -13,7 +13,7 @@
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { background: linear-gradient(135deg, #0a0e27 0%, #1a0033 50%, #0d0a1a 100%); color: #e0e0e0; font-family: 'Segoe UI', Tahoma, sans-serif; min-height: 100vh; }
-        .glass-card { background: rgba(20, 20, 40, 0.75); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 20px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4); }
+        .glass-card { background: rgba(20, 20, 40, 0.8); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 20px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4); }
         .input-field { background: rgba(255, 255, 255, 0.05); border: 2px solid rgba(255, 255, 255, 0.1); border-radius: 12px; padding: 12px 16px; color: #e0e0e0; font-size: 14px; width: 100%; }
         .input-field:focus { outline: none; border-color: #0099ff; box-shadow: 0 0 15px rgba(0, 153, 255, 0.4); }
         .btn-primary { background: linear-gradient(135deg, #7b2cbf, #0099ff); color: white; border: none; border-radius: 12px; padding: 12px 24px; font-weight: 600; font-size: 14px; cursor: pointer; width: 100%; text-transform: uppercase; display: flex; align-items: center; justify-content: center; gap: 8px; }
@@ -21,7 +21,6 @@
         .btn-absent { background: linear-gradient(135deg, #ff3333, #cc0000); color: white; font-weight: bold; }
         .form-container { width: 100%; max-width: 480px; z-index: 10; }
         
-        /* 🔔 Ringing Bell Animation for Notification Button */
         .bell-ring { animation: ring 2.5s infinite ease-in-out; }
         @keyframes ring {
             0%, 100% { transform: rotate(0deg); }
@@ -43,8 +42,9 @@
                     <p class="text-[10px] text-purple-300/80">G H Raisoni University</p>
                 </div>
             </div>
-            <button onclick="openCRAdminModal()" class="text-xs bg-purple-600/40 hover:bg-purple-600/60 text-purple-200 px-3 py-1.5 rounded-xl border border-purple-400/30 font-semibold">
-                👑 CR / Admin
+            <!-- SECURE CR / ADMIN ACCESS BUTTON -->
+            <button onclick="requestCRAccess()" class="text-xs bg-purple-600/40 hover:bg-purple-600/60 text-purple-200 px-3 py-1.5 rounded-xl border border-purple-400/30 font-semibold shadow-lg">
+                🔒 CR Access
             </button>
         </div>
     </header>
@@ -59,7 +59,7 @@
                 <p class="text-xs text-gray-400 mt-1">Access Live Dashboard & Attendance</p>
             </div>
 
-            <!-- 🔔 ACTIVE NOTIFICATION BANNER ON HOME/LOGIN PAGE -->
+            <!-- 🔔 ACTIVE NOTIFICATION BANNER -->
             <div id="notifBanner" class="bg-gradient-to-r from-purple-900/60 to-indigo-900/60 border border-purple-400/30 rounded-2xl p-3 mb-5 flex items-center justify-between">
                 <div class="flex items-center gap-2.5">
                     <div class="w-8 h-8 rounded-xl bg-purple-500/20 flex items-center justify-center text-purple-300 text-lg">
@@ -70,7 +70,7 @@
                         <p class="text-[10px] text-gray-300" id="notifStatusText">Get 10-min lecture reminders</p>
                     </div>
                 </div>
-                <button id="enableNotifBtn" onclick="requestNotificationPermission()" class="bg-purple-600 hover:bg-purple-500 text-white font-bold text-[11px] px-3 py-1.5 rounded-xl shadow-lg border border-purple-400/30 transition">
+                <button id="enableNotifBtn" onclick="requestNotificationPermission()" class="bg-purple-600 hover:bg-purple-500 text-white font-bold text-[11px] px-3 py-1.5 rounded-xl border border-purple-400/30 transition">
                     Enable 🔔
                 </button>
             </div>
@@ -86,7 +86,7 @@
                 </div>
                 
                 <div class="text-right">
-                    <span class="text-xs text-purple-300 cursor-pointer hover:underline" onclick="showSection('forgotSection')">Forgot Password?</span>
+                    <span class="text-xs text-purple-300 cursor-pointer hover:underline font-medium" onclick="showSection('forgotSection')">Forgot Password?</span>
                 </div>
 
                 <button type="submit" class="btn-primary mt-2">
@@ -94,8 +94,8 @@
                     <i class="fa-solid fa-arrow-right text-xs"></i>
                 </button>
             </form>
-            <div class="mt-4 text-center">
-                <p class="text-xs text-gray-400">New Student? <span class="text-cyan-400 font-semibold cursor-pointer underline" onclick="showSection('registerSection')">Register Here</span></p>
+            <div class="mt-5 text-center border-t border-white/10 pt-4">
+                <p class="text-xs text-gray-400">New Student? <span class="text-cyan-400 font-bold cursor-pointer underline hover:text-cyan-300" onclick="showSection('registerSection')">Register Here</span></p>
             </div>
         </section>
 
@@ -103,7 +103,7 @@
         <section id="registerSection" class="glass-card p-6 hidden animate__animated animate__fadeInUp">
             <div class="text-center mb-6">
                 <h2 class="text-2xl font-bold text-white">Student Registration</h2>
-                <p class="text-xs text-gray-400 mt-1">Set your password during registration</p>
+                <p class="text-xs text-gray-400 mt-1">Set your password for first-time signup</p>
             </div>
             <form onsubmit="handleRegister(event)" class="space-y-3">
                 <div>
@@ -130,10 +130,12 @@
                     <label class="text-xs font-semibold uppercase text-gray-300 block mb-1">Create Password</label>
                     <input type="password" id="regPassword" placeholder="Minimum 6 characters" required class="input-field" />
                 </div>
-                <button type="submit" class="btn-primary mt-2">Set Password & Register 🚀</button>
+                <button type="submit" class="btn-primary mt-3" style="background: linear-gradient(135deg, #00cc66, #0099ff);">
+                    Set Password & Register 🚀
+                </button>
             </form>
-            <div class="mt-4 text-center">
-                <p class="text-xs text-gray-400">Already Registered? <span class="text-cyan-400 font-semibold cursor-pointer underline" onclick="showSection('loginSection')">Sign In</span></p>
+            <div class="mt-4 text-center border-t border-white/10 pt-3">
+                <p class="text-xs text-gray-400">Already Registered? <span class="text-cyan-400 font-bold cursor-pointer underline" onclick="showSection('loginSection')">Sign In</span></p>
             </div>
         </section>
 
@@ -141,7 +143,7 @@
         <section id="forgotSection" class="glass-card p-6 hidden animate__animated animate__fadeInUp">
             <div class="text-center mb-6">
                 <h2 class="text-2xl font-bold text-white">Reset Password</h2>
-                <p class="text-xs text-gray-400 mt-1">Verify Mobile Number & Enrollment Number</p>
+                <p class="text-xs text-gray-400 mt-1">Verify Enrollment & Mobile Number</p>
             </div>
             <form onsubmit="handleResetPassword(event)" class="space-y-3">
                 <div>
@@ -207,7 +209,7 @@
             </div>
         </section>
 
-        <!-- 👑 CR / ADMIN MODAL -->
+        <!-- 👑 PROTECTED CR / ADMIN MODAL -->
         <div id="crAdminModal" class="fixed inset-0 bg-black/80 backdrop-blur-md hidden flex items-center justify-center p-4 z-50">
             <div class="glass-card w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto">
                 <div class="flex justify-between items-center mb-4 pb-2 border-b border-white/10">
@@ -223,13 +225,17 @@
                         <select id="adminSubject" class="input-field bg-slate-800 text-xs">
                             <option value="Ecommerce">Ecommerce</option>
                             <option value="Computer Graphics">Computer Graphics</option>
+                            <option value="Advance Excel Lab">Advance Excel Lab</option>
+                            <option value="Modern Operating System">Modern Operating System</option>
                         </select>
                         <select id="adminTeacher" class="input-field bg-slate-800 text-xs">
                             <option value="Prof. Shekhar Todakar">Prof. Shekhar Todakar</option>
                             <option value="Prof. Anuj S. Deshmukh">Prof. Anuj S. Deshmukh</option>
+                            <option value="Dr. Vaibhav V. Thakare">Dr. Vaibhav V. Thakare</option>
+                            <option value="Prof. Rahul G. Nimbokar">Prof. Rahul G. Nimbokar</option>
                         </select>
                     </div>
-                    <button onclick="sendWhatsAppReport()" class="w-full mt-3 bg-emerald-600 text-white font-bold py-2.5 rounded-xl text-xs">
+                    <button onclick="sendWhatsAppReport()" class="w-full mt-3 bg-emerald-600 text-white font-bold py-2.5 rounded-xl text-xs flex items-center justify-center gap-2">
                         <i class="fa-brands fa-whatsapp text-lg"></i> Send Automatic Report To Teacher
                     </button>
                 </div>
@@ -242,7 +248,6 @@
     <script>
         let currentStudent = null;
 
-        // 🔄 AUTO-LOGIN CHECK & NOTIFICATION STATUS CHECK ON LOAD
         window.onload = function() {
             const savedStudent = localStorage.getItem('bca_logged_student');
             if (savedStudent) {
@@ -252,11 +257,11 @@
             checkNotificationStatus();
         };
 
-        // 🔔 Notification Permission Functions
+        // 🔔 Notification Status Checker
         function checkNotificationStatus() {
             if ("Notification" in window) {
                 if (Notification.permission === "granted") {
-                    document.getElementById('notifStatusText').innerText = "✅ Notifications Active!";
+                    document.getElementById('notifStatusText').innerText = "✅ Push Notifications Active!";
                     const btn = document.getElementById('enableNotifBtn');
                     btn.innerText = "Active ✅";
                     btn.className = "bg-emerald-600 text-white font-bold text-[11px] px-3 py-1.5 rounded-xl border border-emerald-400/30";
@@ -271,18 +276,28 @@
                 try {
                     await OneSignal.Notifications.requestPermission();
                     checkNotificationStatus();
-                } catch (err) {
-                    alert("Notification activation requested.");
-                }
+                } catch (err) { alert("Notification permission requested."); }
             });
         }
 
+        // 🎯 SECTION SWITCHER (FIXED)
         function showSection(sectionId) {
             document.getElementById('loginSection').classList.add('hidden');
             document.getElementById('registerSection').classList.add('hidden');
             document.getElementById('forgotSection').classList.add('hidden');
             document.getElementById('dashboardSection').classList.add('hidden');
+            
             document.getElementById(sectionId).classList.remove('hidden');
+        }
+
+        // 👑 CR PASSCODE PROTECTION
+        function requestCRAccess() {
+            const pwd = prompt("🔐 Enter CR / Admin Passcode:");
+            if (pwd === "admin123") { // Default Passcode
+                openCRAdminModal();
+            } else if (pwd !== null) {
+                alert("❌ Wrong Passcode! Access Denied.");
+            }
         }
 
         async function handleLogin(e) {
@@ -322,25 +337,4 @@
                 const res = await fetch('/api/subscribe', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-
-                if (res.status === 200) {
-                    alert("✅ Registration Successful! Please Sign In now.");
-                    showSection('loginSection');
-                } else if (res.status === 409) {
-                    alert("⚠️ Already Registered! Please Login directly.");
-                    showSection('loginSection');
-                } else { alert("Registration Failed."); }
-            } catch (err) { alert("Server error."); }
-        }
-
-        async function handleResetPassword(e) {
-            e.preventDefault();
-            const enroll = document.getElementById('forgotEnroll').value;
-            const phone = document.getElementById('forgotPhone').value;
-            const new_password = document.getElementById('forgotNewPassword').value;
-
-            try {
-                const res = await fetch('/api/reset-password', {
-     
+                    body: JSON.stringify(paylo
