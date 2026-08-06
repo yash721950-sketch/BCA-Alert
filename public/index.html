@@ -3,259 +3,90 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BCA Alert & Attendance System</title>
+    <title>BCA Smart Attendance System - GHRU</title>
     
-    <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- Animate.css -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
-    
-    <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
-    
-    <!-- GSAP -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
-
-    <!-- OneSignal Web Push SDK -->
     <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
     
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        :root {
-            --primary-violet: #7b2cbf;
-            --electric-blue: #0099ff;
-            --glowing-green: #00ff88;
-            --dark-bg: #0a0e27;
-            --glass-border: rgba(255, 255, 255, 0.2);
-        }
-
-        body {
-            background: linear-gradient(135deg, var(--dark-bg) 0%, #1a0033 50%, #0d0a1a 100%);
-            color: #e0e0e0;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            overflow-x: hidden;
-            min-height: 100vh;
-        }
-
-        .background-container {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: 1;
-            overflow: hidden;
-            pointer-events: none;
-        }
-
-        .orb {
-            position: absolute;
-            border-radius: 50%;
-            filter: blur(80px);
-            opacity: 0.3;
-            mix-blend-mode: screen;
-        }
-
-        .orb-1 {
-            width: 300px;
-            height: 300px;
-            background: radial-gradient(circle, var(--primary-violet), transparent);
-            top: -100px;
-            left: -100px;
-            animation: float-orb-1 20s ease-in-out infinite;
-        }
-
-        .orb-2 {
-            width: 400px;
-            height: 400px;
-            background: radial-gradient(circle, var(--electric-blue), transparent);
-            bottom: -150px;
-            right: -100px;
-            animation: float-orb-2 25s ease-in-out infinite;
-        }
-
-        .orb-3 {
-            width: 250px;
-            height: 250px;
-            background: radial-gradient(circle, var(--glowing-green), transparent);
-            top: 50%;
-            right: 10%;
-            animation: float-orb-3 22s ease-in-out infinite;
-        }
-
-        @keyframes float-orb-1 { 0%, 100% { transform: translate(0, 0); } 50% { transform: translate(100px, 0); } }
-        @keyframes float-orb-2 { 0%, 100% { transform: translate(0, 0); } 50% { transform: translate(-100px, 0); } }
-        @keyframes float-orb-3 { 0%, 100% { transform: translate(0, 0); } 50% { transform: translate(-80px, 80px); } }
-
-        .avatar-bounce {
-            animation: floatStudent 3.5s infinite ease-in-out;
-        }
-        @keyframes floatStudent {
-            0%, 100% { transform: translateY(0px); }
-            50% { transform: translateY(-12px); }
-        }
-
-        .glass-card {
-            background: rgba(20, 20, 40, 0.75);
-            backdrop-filter: blur(20px);
-            border: 1px solid var(--glass-border);
-            border-radius: 20px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
-            transition: all 0.3s ease;
-        }
-
-        .input-field {
-            background: rgba(255, 255, 255, 0.05);
-            border: 2px solid rgba(255, 255, 255, 0.1);
-            border-radius: 12px;
-            padding: 12px 16px;
-            color: #e0e0e0;
-            font-size: 14px;
-            width: 100%;
-        }
-
-        .input-field:focus {
-            outline: none;
-            border-color: var(--electric-blue);
-            box-shadow: 0 0 20px rgba(0, 153, 255, 0.4);
-        }
-
-        .input-label {
-            display: block;
-            font-size: 12px;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            color: rgba(224, 224, 224, 0.7);
-            margin-bottom: 6px;
-        }
-
-        .btn-primary {
-            background: linear-gradient(135deg, var(--primary-violet), var(--electric-blue));
-            color: white;
-            border: none;
-            border-radius: 12px;
-            padding: 12px 24px;
-            font-weight: 600;
-            font-size: 14px;
-            cursor: pointer;
-            width: 100%;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-        }
-
-        .btn-action {
-            border: none;
-            border-radius: 12px;
-            padding: 12px 20px;
-            font-weight: 600;
-            font-size: 13px;
-            cursor: pointer;
-            text-transform: uppercase;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            width: 100%;
-        }
-
-        .btn-present { background: linear-gradient(135deg, var(--glowing-green), #00cc66); color: #000; }
-        .btn-absent { background: linear-gradient(135deg, #ff3333, #cc0000); color: white; }
-
-        .action-buttons {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 12px;
-            margin-top: 15px;
-        }
-
-        .form-container {
-            width: 100%;
-            max-width: 450px;
-            z-index: 10;
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background: linear-gradient(135deg, #0a0e27 0%, #1a0033 50%, #0d0a1a 100%); color: #e0e0e0; font-family: 'Segoe UI', Tahoma, sans-serif; min-height: 100vh; }
+        .glass-card { background: rgba(20, 20, 40, 0.75); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 20px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4); }
+        .input-field { background: rgba(255, 255, 255, 0.05); border: 2px solid rgba(255, 255, 255, 0.1); border-radius: 12px; padding: 12px 16px; color: #e0e0e0; font-size: 14px; width: 100%; }
+        .input-field:focus { outline: none; border-color: #0099ff; box-shadow: 0 0 15px rgba(0, 153, 255, 0.4); }
+        .btn-primary { background: linear-gradient(135deg, #7b2cbf, #0099ff); color: white; border: none; border-radius: 12px; padding: 12px 24px; font-weight: 600; font-size: 14px; cursor: pointer; width: 100%; text-transform: uppercase; display: flex; align-items: center; justify-content: center; gap: 8px; }
+        .btn-present { background: linear-gradient(135deg, #00ff88, #00cc66); color: #000; font-weight: bold; }
+        .btn-absent { background: linear-gradient(135deg, #ff3333, #cc0000); color: white; font-weight: bold; }
+        .form-container { width: 100%; max-width: 480px; z-index: 10; }
+        
+        /* 🔔 Ringing Bell Animation for Notification Button */
+        .bell-ring { animation: ring 2.5s infinite ease-in-out; }
+        @keyframes ring {
+            0%, 100% { transform: rotate(0deg); }
+            10%, 30% { transform: rotate(15deg); }
+            20%, 40% { transform: rotate(-15deg); }
+            50% { transform: rotate(0deg); }
         }
     </style>
 </head>
-<body class="flex items-center justify-center min-h-screen p-4 relative">
+<body class="flex flex-col items-center min-h-screen p-4 relative justify-between">
 
-    <div class="background-container">
-        <div class="orb orb-1"></div>
-        <div class="orb orb-2"></div>
-        <div class="orb orb-3"></div>
-    </div>
-
-    <div class="form-container">
-
-        <!-- TOP BAR (CLEANED - NO ADMIN BUTTON) -->
-        <div class="flex justify-between items-center mb-6 px-2 relative z-10">
-            <div class="flex items-center gap-3">
-                <div class="w-10 h-10 rounded-xl bg-purple-600/30 border border-purple-400/40 flex items-center justify-center font-bold text-xl text-purple-300">
-                    🎓
-                </div>
+    <!-- APP HEADER -->
+    <header class="w-full max-w-lg mb-4 relative z-20">
+        <div class="flex justify-between items-center bg-white/5 border border-white/10 p-3 rounded-2xl backdrop-blur-md">
+            <div class="flex items-center gap-2">
+                <div class="w-9 h-9 rounded-xl bg-purple-600/30 border border-purple-400/40 flex items-center justify-center font-bold text-lg text-purple-300">🎓</div>
                 <div>
-                    <h1 class="font-bold text-lg leading-tight text-white">BCA Alert System</h1>
-                    <p class="text-xs text-purple-300/80">G H Raisoni University</p>
+                    <h1 class="font-bold text-sm leading-tight text-white">BCA Smart Portal</h1>
+                    <p class="text-[10px] text-purple-300/80">G H Raisoni University</p>
                 </div>
             </div>
-            <div class="relative">
-                <i class="fa-solid fa-bell text-2xl text-purple-300"></i>
-                <span class="absolute -top-1 -right-1 w-2.5 h-2.5 bg-emerald-400 rounded-full"></span>
-            </div>
+            <button onclick="openCRAdminModal()" class="text-xs bg-purple-600/40 hover:bg-purple-600/60 text-purple-200 px-3 py-1.5 rounded-xl border border-purple-400/30 font-semibold">
+                👑 CR / Admin
+            </button>
         </div>
+    </header>
 
-        <!-- 1️⃣ SCREEN 1: LOGIN FORM WITH CUSTOM RAISONI STUDENT AVATAR -->
-        <div id="loginCard" class="glass-card p-6 animate__animated animate__fadeInUp">
-            
-            <div class="flex justify-center mb-3">
-                <div class="avatar-bounce">
-                    <svg class="w-28 h-28 drop-shadow-[0_10px_20px_rgba(123,44,191,0.5)]" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <circle cx="100" cy="100" r="85" fill="url(#avatarGlow)" fill-opacity="0.25"/>
-                        <path d="M100 40C83 40 70 53 70 70C70 82 78 92 88 97V105H112V97C122 92 130 82 130 70C130 53 117 40 100 40Z" fill="#F3D0B5"/>
-                        <path d="M100 35C80 35 68 48 68 65C72 65 78 58 88 58C98 58 102 52 108 52C118 52 122 62 132 62C132 45 120 35 100 35Z" fill="#2D213F"/>
-                        <circle cx="88" cy="72" r="3" fill="#2D213F"/>
-                        <circle cx="112" cy="72" r="3" fill="#2D213F"/>
-                        <path d="M94 83C94 83 97 87 100 87C103 87 106 83 106 83" stroke="#2D213F" stroke-width="2.5" stroke-linecap="round"/>
-                        <path d="M60 120C60 110 75 105 100 105C125 105 140 110 140 120L148 180H52L60 120Z" fill="#FFFFFF"/>
-                        <path d="M88 105L100 115L112 105" stroke="#7b2cbf" stroke-width="3" stroke-linecap="round"/>
-                        <rect x="70" y="132" width="60" height="18" rx="4" fill="#F3E8FF" opacity="0.95"/>
-                        <text x="100" y="141" fill="#7b2cbf" font-size="6.5" font-family="sans-serif" font-weight="900" text-anchor="middle">RAISONI</text>
-                        <text x="100" y="147" fill="#5c1d91" font-size="4.5" font-family="sans-serif" font-weight="700" text-anchor="middle">EDUCATION</text>
-                        <path d="M68 115L62 160" stroke="#0099ff" stroke-width="5" stroke-linecap="round"/>
-                        <path d="M132 115L138 160" stroke="#0099ff" stroke-width="5" stroke-linecap="round"/>
-                        <defs>
-                            <radialGradient id="avatarGlow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(100 100) scale(85)">
-                                <stop stop-color="#9D4EDD"/>
-                                <stop offset="1" stop-color="#7B2CBF" stop-opacity="0"/>
-                            </radialGradient>
-                        </defs>
-                    </svg>
-                </div>
+    <!-- MAIN CONTAINER -->
+    <main class="form-container my-auto">
+
+        <!-- 1️⃣ LOGIN SECTION -->
+        <section id="loginSection" class="glass-card p-6 animate__animated animate__fadeInUp">
+            <div class="text-center mb-5">
+                <h2 class="text-2xl font-bold text-white">Student Login</h2>
+                <p class="text-xs text-gray-400 mt-1">Access Live Dashboard & Attendance</p>
             </div>
 
-            <div class="text-center mb-6">
-                <h2 class="text-2xl font-bold text-white tracking-wide">Student Login</h2>
-                <p class="text-xs text-gray-400 mt-1">Access Live Timetable & Attendance</p>
+            <!-- 🔔 ACTIVE NOTIFICATION BANNER ON HOME/LOGIN PAGE -->
+            <div id="notifBanner" class="bg-gradient-to-r from-purple-900/60 to-indigo-900/60 border border-purple-400/30 rounded-2xl p-3 mb-5 flex items-center justify-between">
+                <div class="flex items-center gap-2.5">
+                    <div class="w-8 h-8 rounded-xl bg-purple-500/20 flex items-center justify-center text-purple-300 text-lg">
+                        <i class="fa-solid fa-bell bell-ring"></i>
+                    </div>
+                    <div>
+                        <h4 class="text-xs font-bold text-white">Lecture Push Alerts</h4>
+                        <p class="text-[10px] text-gray-300" id="notifStatusText">Get 10-min lecture reminders</p>
+                    </div>
+                </div>
+                <button id="enableNotifBtn" onclick="requestNotificationPermission()" class="bg-purple-600 hover:bg-purple-500 text-white font-bold text-[11px] px-3 py-1.5 rounded-xl shadow-lg border border-purple-400/30 transition">
+                    Enable 🔔
+                </button>
             </div>
 
             <form onsubmit="handleLogin(event)" class="space-y-4">
                 <div>
-                    <label class="input-label">Enrollment Number</label>
+                    <label class="text-xs font-semibold uppercase text-gray-300 block mb-1">Enrollment Number</label>
                     <input type="text" id="loginEnroll" placeholder="e.g. GHRUA25011140001" required class="input-field" />
                 </div>
-
                 <div>
-                    <label class="input-label">Mobile Number</label>
-                    <input type="tel" id="loginPhone" placeholder="10-digit Mobile Number" required class="input-field" />
+                    <label class="text-xs font-semibold uppercase text-gray-300 block mb-1">Password</label>
+                    <input type="password" id="loginPassword" placeholder="Enter Your Password" required class="input-field" />
+                </div>
+                
+                <div class="text-right">
+                    <span class="text-xs text-purple-300 cursor-pointer hover:underline" onclick="showSection('forgotSection')">Forgot Password?</span>
                 </div>
 
                 <button type="submit" class="btn-primary mt-2">
@@ -263,156 +94,228 @@
                     <i class="fa-solid fa-arrow-right text-xs"></i>
                 </button>
             </form>
-
-            <div class="mt-6 text-center">
-                <p class="text-xs text-gray-400">New Student? 
-                    <span class="text-cyan-400 font-semibold cursor-pointer underline hover:text-cyan-300" onclick="toggleAuth('register')">Register First</span>
-                </p>
+            <div class="mt-4 text-center">
+                <p class="text-xs text-gray-400">New Student? <span class="text-cyan-400 font-semibold cursor-pointer underline" onclick="showSection('registerSection')">Register Here</span></p>
             </div>
-        </div>
+        </section>
 
-        <!-- 2️⃣ SCREEN 2: REGISTRATION FORM -->
-        <div id="registerCard" class="glass-card p-6 hidden animate__animated animate__fadeInUp">
+        <!-- 2️⃣ REGISTRATION SECTION -->
+        <section id="registerSection" class="glass-card p-6 hidden animate__animated animate__fadeInUp">
             <div class="text-center mb-6">
-                <h2 class="text-2xl font-bold text-white tracking-wide">Student Register</h2>
-                <p class="text-xs text-gray-400 mt-1">Register for Automatic Lecture Push Alerts</p>
+                <h2 class="text-2xl font-bold text-white">Student Registration</h2>
+                <p class="text-xs text-gray-400 mt-1">Set your password during registration</p>
             </div>
-
             <form onsubmit="handleRegister(event)" class="space-y-3">
                 <div>
-                    <label class="input-label">Full Name</label>
+                    <label class="text-xs font-semibold uppercase text-gray-300 block mb-1">Full Name</label>
                     <input type="text" id="regName" placeholder="e.g. Yash Deshmukh" required class="input-field" />
                 </div>
-
                 <div>
-                    <label class="input-label">Enrollment Number</label>
+                    <label class="text-xs font-semibold uppercase text-gray-300 block mb-1">Enrollment Number</label>
                     <input type="text" id="regEnroll" placeholder="GHRUA2501114XXXX" required class="input-field" />
                 </div>
-
                 <div class="grid grid-cols-2 gap-2">
                     <div>
-                        <label class="input-label">Mobile No</label>
+                        <label class="text-xs font-semibold uppercase text-gray-300 block mb-1">Mobile No</label>
                         <input type="tel" id="regPhone" placeholder="10 Digits" required class="input-field" />
                     </div>
                     <div>
-                        <label class="input-label">Semester</label>
+                        <label class="text-xs font-semibold uppercase text-gray-300 block mb-1">Semester</label>
                         <select id="regSem" required class="input-field bg-slate-800">
-                            <option value="SEM 1">SEM 1</option>
-                            <option value="SEM 2">SEM 2</option>
                             <option value="SEM 3" selected>SEM 3</option>
-                            <option value="SEM 4">SEM 4</option>
                         </select>
                     </div>
                 </div>
+                <div>
+                    <label class="text-xs font-semibold uppercase text-gray-300 block mb-1">Create Password</label>
+                    <input type="password" id="regPassword" placeholder="Minimum 6 characters" required class="input-field" />
+                </div>
+                <button type="submit" class="btn-primary mt-2">Set Password & Register 🚀</button>
+            </form>
+            <div class="mt-4 text-center">
+                <p class="text-xs text-gray-400">Already Registered? <span class="text-cyan-400 font-semibold cursor-pointer underline" onclick="showSection('loginSection')">Sign In</span></p>
+            </div>
+        </section>
 
+        <!-- 3️⃣ FORGOT PASSWORD SECTION -->
+        <section id="forgotSection" class="glass-card p-6 hidden animate__animated animate__fadeInUp">
+            <div class="text-center mb-6">
+                <h2 class="text-2xl font-bold text-white">Reset Password</h2>
+                <p class="text-xs text-gray-400 mt-1">Verify Mobile Number & Enrollment Number</p>
+            </div>
+            <form onsubmit="handleResetPassword(event)" class="space-y-3">
+                <div>
+                    <label class="text-xs font-semibold uppercase text-gray-300 block mb-1">Enrollment Number</label>
+                    <input type="text" id="forgotEnroll" placeholder="e.g. GHRUA25011140001" required class="input-field" />
+                </div>
+                <div>
+                    <label class="text-xs font-semibold uppercase text-gray-300 block mb-1">Registered Mobile Number</label>
+                    <input type="tel" id="forgotPhone" placeholder="10-digit Mobile Number" required class="input-field" />
+                </div>
+                <div>
+                    <label class="text-xs font-semibold uppercase text-gray-300 block mb-1">Enter New Password</label>
+                    <input type="password" id="forgotNewPassword" placeholder="New Password" required class="input-field" />
+                </div>
                 <button type="submit" class="btn-primary mt-2" style="background: linear-gradient(135deg, #00cc66, #0099ff);">
-                    <span>Complete Registration 🚀</span>
+                    Verify & Reset Password 🔐
                 </button>
             </form>
-
             <div class="mt-4 text-center">
-                <p class="text-xs text-gray-400">Already Registered? 
-                    <span class="text-cyan-400 font-semibold cursor-pointer underline" onclick="toggleAuth('login')">Sign In Here</span>
-                </p>
+                <p class="text-xs text-gray-400"><span class="text-cyan-400 font-semibold cursor-pointer underline" onclick="showSection('loginSection')">← Back To Login</span></p>
             </div>
-        </div>
+        </section>
 
-        <!-- 3️⃣ SCREEN 3: STUDENT DASHBOARD & ATTENDANCE -->
-        <div id="dashboardCard" class="glass-card p-6 hidden animate__animated animate__fadeIn">
+        <!-- 4️⃣ STUDENT DASHBOARD -->
+        <section id="dashboardSection" class="glass-card p-6 hidden animate__animated animate__fadeIn">
             <div class="flex items-center justify-between border-b border-white/10 pb-4 mb-4">
                 <div>
                     <span class="text-[10px] bg-purple-500/30 text-purple-300 font-semibold px-2.5 py-0.5 rounded-full border border-purple-400/30" id="dashSem">SEM 3</span>
                     <h3 class="text-lg font-bold text-white mt-1" id="dashName">Student Name</h3>
                     <p class="text-xs text-gray-400 font-mono" id="dashEnroll">GHRUA25011140000</p>
                 </div>
-                <button onclick="logout()" class="text-xs text-rose-400 hover:text-rose-300 bg-rose-500/10 px-3 py-2 rounded-xl border border-rose-500/20">
-                    <i class="fa-solid fa-right-from-bracket"></i> Exit
+                <button onclick="logout()" class="text-xs text-rose-400 hover:text-rose-300 bg-rose-500/10 px-3 py-1.5 rounded-xl border border-rose-500/20">
+                    <i class="fa-solid fa-right-from-bracket"></i> Logout
                 </button>
             </div>
 
-            <!-- Live Lecture Card -->
+            <!-- Live Lecture -->
             <div class="bg-gradient-to-br from-purple-900/40 to-blue-900/40 rounded-2xl p-4 border border-purple-500/30 mb-4">
                 <div class="flex justify-between items-center mb-2">
                     <span class="text-xs font-bold text-emerald-400 flex items-center gap-1.5">
                         <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span> LIVE LECTURE
                     </span>
-                    <span class="text-xs text-gray-300" id="dashTime">12:45 PM</span>
+                    <span class="text-xs text-gray-300 font-mono">12:45 PM</span>
                 </div>
+                <h4 class="text-base font-bold text-white mb-1" id="dashSubject">Ecommerce</h4>
+                <p class="text-xs text-gray-300"><i class="fa-solid fa-user-tie text-purple-300 mr-1"></i> <span id="dashTeacher">Prof. Shekhar Todakar</span></p>
 
-                <h4 class="text-base font-bold text-white mb-1" id="dashSubject">Computer Graphics</h4>
-                <p class="text-xs text-gray-300"><i class="fa-solid fa-user-tie text-purple-300 mr-1"></i> <span id="dashTeacher">Prof. Anuj S. Deshmukh</span></p>
-
-                <!-- Action Buttons -->
                 <div id="attendanceActionArea" class="mt-4 pt-3 border-t border-white/10">
-                    <p class="text-xs text-center text-gray-300 mb-3">Are you physically present in class?</p>
-                    <div class="action-buttons">
-                        <button onclick="markAttendance('YES')" class="btn-action btn-present">
-                            <i class="fa-solid fa-circle-check"></i> YES (PRESENT)
+                    <p class="text-xs text-center text-emerald-300 font-medium mb-3">Did you attend this lecture in campus?</p>
+                    <div class="grid grid-cols-2 gap-3">
+                        <button onclick="markAttendance('YES')" class="btn-present py-2.5 rounded-xl text-xs flex items-center justify-center gap-1.5">
+                            <i class="fa-solid fa-circle-check"></i> YES (ATTENDED)
                         </button>
-                        <button onclick="markAttendance('NO')" class="btn-action btn-absent">
+                        <button onclick="markAttendance('NO')" class="btn-absent py-2.5 rounded-xl text-xs flex items-center justify-center gap-1.5">
                             <i class="fa-solid fa-circle-xmark"></i> NO (ABSENT)
                         </button>
                     </div>
                 </div>
             </div>
 
-            <!-- Status Result Display -->
-            <div id="statusResultCard" class="bg-white/5 rounded-2xl p-4 text-center border border-white/10">
-                <p class="text-xs text-gray-400 mb-1">Today's Attendance Status</p>
-                <p id="statusText" class="text-sm font-bold text-gray-300">Pending Selection...</p>
+            <div id="statusResultCard" class="bg-white/5 rounded-2xl p-3 text-center border border-white/10">
+                <p id="statusText" class="text-xs font-bold text-gray-300">Attendance status will be updated here after response.</p>
+            </div>
+        </section>
+
+        <!-- 👑 CR / ADMIN MODAL -->
+        <div id="crAdminModal" class="fixed inset-0 bg-black/80 backdrop-blur-md hidden flex items-center justify-center p-4 z-50">
+            <div class="glass-card w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto">
+                <div class="flex justify-between items-center mb-4 pb-2 border-b border-white/10">
+                    <h3 class="text-base font-bold text-purple-300">👑 CR & Admin Attendance Management</h3>
+                    <button onclick="closeCRAdminModal()" class="text-gray-400 text-2xl font-bold">&times;</button>
+                </div>
+                <div id="attendanceList" class="space-y-2 mb-4">
+                    <p class="text-xs text-gray-400 text-center">Loading live attendance...</p>
+                </div>
+                <div class="bg-white/5 p-3.5 rounded-xl border border-white/10">
+                    <label class="text-xs font-bold text-gray-300 block mb-2">Send Verified Attendance Report</label>
+                    <div class="grid grid-cols-2 gap-2">
+                        <select id="adminSubject" class="input-field bg-slate-800 text-xs">
+                            <option value="Ecommerce">Ecommerce</option>
+                            <option value="Computer Graphics">Computer Graphics</option>
+                        </select>
+                        <select id="adminTeacher" class="input-field bg-slate-800 text-xs">
+                            <option value="Prof. Shekhar Todakar">Prof. Shekhar Todakar</option>
+                            <option value="Prof. Anuj S. Deshmukh">Prof. Anuj S. Deshmukh</option>
+                        </select>
+                    </div>
+                    <button onclick="sendWhatsAppReport()" class="w-full mt-3 bg-emerald-600 text-white font-bold py-2.5 rounded-xl text-xs">
+                        <i class="fa-brands fa-whatsapp text-lg"></i> Send Automatic Report To Teacher
+                    </button>
+                </div>
             </div>
         </div>
 
-    </div>
+    </main>
 
     <!-- JAVASCRIPT LOGIC -->
     <script>
         let currentStudent = null;
 
-        function toggleAuth(type) {
-            const loginCard = document.getElementById('loginCard');
-            const regCard = document.getElementById('registerCard');
-            if (type === 'register') {
-                loginCard.classList.add('hidden');
-                regCard.classList.remove('hidden');
-            } else {
-                regCard.classList.add('hidden');
-                loginCard.classList.remove('hidden');
+        // 🔄 AUTO-LOGIN CHECK & NOTIFICATION STATUS CHECK ON LOAD
+        window.onload = function() {
+            const savedStudent = localStorage.getItem('bca_logged_student');
+            if (savedStudent) {
+                currentStudent = JSON.parse(savedStudent);
+                openDashboard();
             }
+            checkNotificationStatus();
+        };
+
+        // 🔔 Notification Permission Functions
+        function checkNotificationStatus() {
+            if ("Notification" in window) {
+                if (Notification.permission === "granted") {
+                    document.getElementById('notifStatusText').innerText = "✅ Notifications Active!";
+                    const btn = document.getElementById('enableNotifBtn');
+                    btn.innerText = "Active ✅";
+                    btn.className = "bg-emerald-600 text-white font-bold text-[11px] px-3 py-1.5 rounded-xl border border-emerald-400/30";
+                    btn.onclick = null;
+                }
+            }
+        }
+
+        function requestNotificationPermission() {
+            window.OneSignalDeferred = window.OneSignalDeferred || [];
+            OneSignalDeferred.push(async function(OneSignal) {
+                try {
+                    await OneSignal.Notifications.requestPermission();
+                    checkNotificationStatus();
+                } catch (err) {
+                    alert("Notification activation requested.");
+                }
+            });
+        }
+
+        function showSection(sectionId) {
+            document.getElementById('loginSection').classList.add('hidden');
+            document.getElementById('registerSection').classList.add('hidden');
+            document.getElementById('forgotSection').classList.add('hidden');
+            document.getElementById('dashboardSection').classList.add('hidden');
+            document.getElementById(sectionId).classList.remove('hidden');
         }
 
         async function handleLogin(e) {
             e.preventDefault();
             const enroll = document.getElementById('loginEnroll').value;
-            const phone = document.getElementById('loginPhone').value;
+            const password = document.getElementById('loginPassword').value;
 
             try {
                 const res = await fetch('/api/login', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ enroll_no: enroll, phone: phone })
+                    body: JSON.stringify({ enroll_no: enroll, password: password })
                 });
                 const data = await res.json();
 
                 if (data.success) {
                     currentStudent = data.student;
+                    localStorage.setItem('bca_logged_student', JSON.stringify(currentStudent));
                     openDashboard();
                 } else {
-                    alert(data.error || "Invalid Credentials!");
+                    alert(data.error || "Invalid Enrollment Number or Password!");
                 }
-            } catch (err) {
-                alert("Server connection error.");
-            }
+            } catch (err) { alert("Server Error."); }
         }
 
-        /* 🔧 FIXED: Already Registered Error Handling */
         async function handleRegister(e) {
             e.preventDefault();
             const payload = {
                 name: document.getElementById('regName').value,
                 enroll_no: document.getElementById('regEnroll').value,
                 phone: document.getElementById('regPhone').value,
-                sem: document.getElementById('regSem').value
+                sem: document.getElementById('regSem').value,
+                password: document.getElementById('regPassword').value
             };
 
             try {
@@ -424,40 +327,20 @@
 
                 if (res.status === 200) {
                     alert("✅ Registration Successful! Please Sign In now.");
-                    toggleAuth('login');
+                    showSection('loginSection');
                 } else if (res.status === 409) {
-                    alert("⚠️ Already Registered! Your Enrollment Number or Phone is already in database. Please Sign In directly.");
-                    toggleAuth('login');
-                } else if (res.status === 403) {
-                    alert("❌ Access Denied! Invalid Enrollment Number sequence.");
-                } else {
-                    alert("Registration Failed. Please check inputs.");
-                }
-            } catch (err) {
-                alert("Server error.");
-            }
+                    alert("⚠️ Already Registered! Please Login directly.");
+                    showSection('loginSection');
+                } else { alert("Registration Failed."); }
+            } catch (err) { alert("Server error."); }
         }
 
-        function openDashboard() {
-            document.getElementById('loginCard').classList.add('hidden');
-            document.getElementById('registerCard').classList.add('hidden');
-            document.getElementById('dashboardCard').classList.remove('hidden');
+        async function handleResetPassword(e) {
+            e.preventDefault();
+            const enroll = document.getElementById('forgotEnroll').value;
+            const phone = document.getElementById('forgotPhone').value;
+            const new_password = document.getElementById('forgotNewPassword').value;
 
-            document.getElementById('dashName').innerText = currentStudent.name;
-            document.getElementById('dashEnroll').innerText = currentStudent.enroll_no;
-            document.getElementById('dashSem').innerText = currentStudent.sem;
-        }
-
-        function markAttendance(statusChoice) {
-            if (statusChoice === 'NO') {
-                sendAttendanceRequest(statusChoice, null, null);
-                return;
-            }
-
-            if ("geolocation" in navigator) {
-                navigator.geolocation.getCurrentPosition(
-                    (position) => {
-                        sendAttendanceRequest('YES', position.coords.latitude, position.coords.longitude);
-                    },
-                    (error) => {
-                        alert("❌ Location Permission Required to Verify Campus Attendan
+            try {
+                const res = await fetch('/api/reset-password', {
+     
